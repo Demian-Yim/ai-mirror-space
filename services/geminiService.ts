@@ -1,10 +1,12 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 
-if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable not set");
+const API_KEY = process.env.API_KEY;
+
+if (!API_KEY) {
+    throw new Error("API_KEY environment variable not set. Please check your deployment settings.");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 interface AiImageResult {
     image: string | null;
