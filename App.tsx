@@ -11,7 +11,7 @@ import { GalleryModal } from './components/GalleryModal';
 import { NeumorphicPanel } from './components/NeumorphicPanel';
 import { NeumorphicButton } from './components/NeumorphicButton';
 import { STYLES, ENHANCEMENT_PROMPTS, INSPIRATION_PROMPTS, ASPECT_RATIOS } from './constants';
-import type { Style, GeneratedImage, AspectRatio } from './types';
+import type { Style, GeneratedImage, AspectRatio, AppMessage } from './types';
 import { editImageWithGemini, generateImageWithImagen, recomposeImagesWithGemini } from './services/geminiService';
 import { getMimeType } from './utils/imageUtils';
 
@@ -29,7 +29,7 @@ const App: React.FC = () => {
     const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
     const [activeResult, setActiveResult] = useState<GeneratedImage | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
+    const [message, setMessage] = useState<AppMessage | null>(null);
 
     // Gallery and Modal State
     const [isSelectionMode, setIsSelectionMode] = useState<boolean>(false);
@@ -71,7 +71,7 @@ const App: React.FC = () => {
 
     const handleGenerate = useCallback(async (modificationPrompt: string = '', ageModification: number | null = null) => {
         setIsLoading(true);
-        setError(null);
+        setMessage(null);
 
         try {
             let result;
@@ -92,7 +92,7 @@ const App: React.FC = () => {
                  if (!imageToEditBase64) throw new Error('수정할 이미지가 없습니다.');
 
                  if (!selectedStyle && !modificationPrompt && !prompt && ageModification === null) {
-                    alert('스타일을 선택하거나 프롬프트를 입력해주세요.');
+                    setMessage({ text: '스타일을 선택하거나 프롬프트를 입력해주세요.', type: 'warning' });
                     setIsLoading(false);
                     return;
                 }
@@ -113,7 +113,7 @@ const App: React.FC = () => {
             // Mode 3: Text-to-Image Generation
             else {
                 if (!prompt.trim()) {
-                    alert('이미지를 생성하려면 프롬프트를 입력해주세요.');
+                    setMessage({ text: '이미지를 생성하려면 프롬프트를 입력해주세요.', type: 'warning' });
                     setIsLoading(false);
                     return;
                 }
@@ -141,7 +141,7 @@ const App: React.FC = () => {
         } catch (err) {
             console.error(err);
             const errorMessage = (err instanceof Error) ? err.message : '이미지 생성에 실패했습니다. 다시 시도해주세요.';
-            setError(errorMessage);
+            setMessage({ text: errorMessage, type: 'error' });
         } finally {
             setIsLoading(false);
         }
@@ -187,7 +187,7 @@ const App: React.FC = () => {
 
     const downloadSelectedImages = async () => {
         if (selectedImageIds.size === 0) {
-            alert('저장할 이미지를 선택해주세요.');
+            setMessage({ text: '저장할 이미지를 선택해주세요.', type: 'warning' });
             return;
         }
         const zip = new JSZip();
@@ -289,59 +289,61 @@ const App: React.FC = () => {
                     </aside>
 
                     {/* ===== Control Panel (Center) ===== */}
-                    <section className="lg:col-span-6 space-y-6 flex flex-col animate-[fadeIn_0.5s_ease-out_forwards] opacity-0" style={{ animationDelay: '400ms' }}>
-                        <NeumorphicPanel>
-                             <div className="flex justify-between items-center mb-4">
-                                <h2 className="text-xl font-bold text-[var(--text-primary)]">1. 프롬프트 입력</h2>
-                                <NeumorphicButton onClick={handleGetInspiration} title="새로운 영감 받기" className="!p-2 !rounded-full text-xl !bg-transparent">
-                                    💡
-                                </NeumorphicButton>
+                    <fieldset disabled={isLoading} className="lg:col-span-6 flex flex-col animate-[fadeIn_0.5s_ease-out_forwards] opacity-0 transition-opacity duration-300 disabled:opacity-50 disabled:cursor-wait" style={{ animationDelay: '400ms' }}>
+                        <section className="space-y-6 flex flex-col flex-grow">
+                            <NeumorphicPanel>
+                                 <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-xl font-bold text-[var(--text-primary)]">1. 프롬프트 입력</h2>
+                                    <NeumorphicButton onClick={handleGetInspiration} title="새로운 영감 받기" className="!p-2 !rounded-full text-xl !bg-transparent">
+                                        💡
+                                    </NeumorphicButton>
+                                </div>
+                                <textarea
+                                    value={prompt}
+                                    onChange={(e) => setPrompt(e.target.value)}
+                                    className="w-full h-24 p-4 text-base rounded-xl custom-inset focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]"
+                                    placeholder={promptPlaceholder}
+                                />
+                            </NeumorphicPanel>
+
+                            <NeumorphicPanel className="flex-grow flex flex-col">
+                                <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">2. 스타일 선택</h2>
+                                <StyleSelector styles={STYLES} selectedStyle={selectedStyle} onSelectStyle={handleStyleSelect} />
+                            </NeumorphicPanel>
+
+                            <NeumorphicPanel>
+                                <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">3. 사진 비율 선택</h2>
+                                <AspectRatioSelector 
+                                    aspectRatios={ASPECT_RATIOS} 
+                                    selectedAspectRatio={selectedAspectRatio} 
+                                    onSelectAspectRatio={handleAspectRatioSelect}
+                                    disabled={!!sourceImage1 || !!sourceImage2}
+                                />
+                            </NeumorphicPanel>
+
+                             <NeumorphicPanel className="neon-glow-panel">
+                                    <h2 className="text-xl font-bold text-[var(--text-primary)] text-center mb-2">✨ AI Magic Tools</h2>
+                                    <p className="text-xs text-center text-[var(--text-secondary)] mb-6">결과물에 적용하여 연속적으로 수정할 수 있습니다.</p>
+                                    <PostProcessingControls onModify={handleGenerate} disabled={isLoading || (!activeResult && !sourceImage1)} />
+                             </NeumorphicPanel>
+                            
+                             <div className="pt-2 mt-auto">
+                                 <button
+                                    onClick={() => handleGenerate()}
+                                    disabled={isGenerationDisabled}
+                                    className="main-generate-button w-full rounded-full py-4 px-10 text-xl font-bold text-white bg-[var(--accent-color)] transition-all duration-300 ease-in-out shadow-lg hover:-translate-y-1 disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-[var(--text-tertiary)] disabled:shadow-none"
+                                >
+                                    {isLoading ? '생성 중...' : '발견하기'}
+                                </button>
                             </div>
-                            <textarea
-                                value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
-                                className="w-full h-24 p-4 text-base rounded-xl custom-inset focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]"
-                                placeholder={promptPlaceholder}
-                            />
-                        </NeumorphicPanel>
-
-                        <NeumorphicPanel className="flex-grow flex flex-col">
-                            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">2. 스타일 선택</h2>
-                            <StyleSelector styles={STYLES} selectedStyle={selectedStyle} onSelectStyle={handleStyleSelect} />
-                        </NeumorphicPanel>
-
-                        <NeumorphicPanel>
-                            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">3. 사진 비율 선택</h2>
-                            <AspectRatioSelector 
-                                aspectRatios={ASPECT_RATIOS} 
-                                selectedAspectRatio={selectedAspectRatio} 
-                                onSelectAspectRatio={handleAspectRatioSelect}
-                                disabled={!!sourceImage1 || !!sourceImage2}
-                            />
-                        </NeumorphicPanel>
-
-                         <NeumorphicPanel className="neon-glow-panel">
-                                <h2 className="text-xl font-bold text-[var(--text-primary)] text-center mb-2">✨ AI Magic Tools</h2>
-                                <p className="text-xs text-center text-[var(--text-secondary)] mb-6">결과물에 적용하여 연속적으로 수정할 수 있습니다.</p>
-                                <PostProcessingControls onModify={handleGenerate} disabled={isLoading || (!activeResult && !sourceImage1)} />
-                         </NeumorphicPanel>
-                        
-                         <div className="pt-2">
-                             <button
-                                onClick={() => handleGenerate()}
-                                disabled={isGenerationDisabled}
-                                className="main-generate-button w-full rounded-full py-4 px-10 text-xl font-bold text-white bg-[var(--accent-color)] transition-all duration-300 ease-in-out shadow-lg hover:-translate-y-1 disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-[var(--text-tertiary)] disabled:shadow-none"
-                            >
-                                {isLoading ? '생성 중...' : '발견하기'}
-                            </button>
-                        </div>
-                    </section>
+                        </section>
+                    </fieldset>
 
                     {/* ===== Result Viewer Panel (Right) ===== */}
                     <aside className="lg:col-span-3 flex flex-col animate-[fadeIn_0.5s_ease-out_forwards] opacity-0" style={{ animationDelay: '600ms' }}>
                          <NeumorphicPanel className="h-full flex flex-col">
                             <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">결과물</h2>
-                            <ResultViewer image={activeResult} isLoading={isLoading} error={error} onDownload={handleDownloadActiveImage}/>
+                            <ResultViewer image={activeResult} isLoading={isLoading} message={message} onDownload={handleDownloadActiveImage}/>
                         </NeumorphicPanel>
                     </aside>
                 </main>
@@ -392,7 +394,7 @@ const App: React.FC = () => {
             </div>
 
             <footer className="text-center py-8 text-[var(--text-tertiary)] text-base">
-                <p className="font-semibold"><span className="neon-text-subtle">© Created by Demian 임정훈</span></p>
+                <p className="font-semibold neon-text-subtle">© Created by Demian 임정훈</p>
             </footer>
         </div>
     );

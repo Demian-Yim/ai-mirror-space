@@ -61,7 +61,7 @@ export const PostProcessingControls: React.FC<PostProcessingControlsProps> = ({ 
                             key={btn.key}
                             onClick={() => onModify(POST_PROCESSING_PROMPTS[btn.key])}
                             disabled={disabled}
-                            className="flex-col !p-4 space-y-3 h-32 bg-gray-900/50 border border-gray-700 hover:bg-gray-900/80"
+                            className="flex-col !p-4 space-y-3 h-32"
                             title={btn.label}
                         >
                             <span className="text-6xl">{btn.icon}</span>
@@ -78,7 +78,7 @@ export const PostProcessingControls: React.FC<PostProcessingControlsProps> = ({ 
                             key={btn.key}
                             onClick={() => onModify(POST_PROCESSING_PROMPTS[btn.key])}
                             disabled={disabled}
-                            className="flex-col aspect-square !rounded-2xl justify-center space-y-2 bg-gray-900/50 border border-gray-700 hover:bg-gray-900/80"
+                            className="flex-col aspect-square !rounded-2xl justify-center space-y-2"
                             title={btn.label}
                         >
                             <span className="text-5xl">{btn.icon}</span>

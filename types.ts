@@ -17,3 +17,8 @@ export interface AspectRatio {
     name: string;
     icon: string;
 }
+
+export interface AppMessage {
+    text: string;
+    type: 'error' | 'warning' | 'info';
+}
