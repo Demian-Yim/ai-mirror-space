@@ -5,7 +5,7 @@ export const STYLES: Style[] = [
     { id: 'figure', name: '피규어', icon: '🤖' },
     { id: 'profile', name: '프로필', icon: '🪪' },
     { id: 'drawing', name: '드로잉', icon: '✍️' },
-    { id: 'poster', name: '포스터', icon: '📰' },
+    { id: 'poster', name: '포스터', icon: '🎞️' },
     { id: 'watercolor', name: '수채화', icon: '🎨' },
     { id: 'oil-painting', name: '유화', icon: '🖼️' },
     { id: 'cinematic', name: '시네마틱', icon: '🎬' },
@@ -22,14 +22,14 @@ export const ASPECT_RATIOS: AspectRatio[] = [
 
 export const ENHANCEMENT_PROMPTS: Record<string, string> = {
     photorealistic: "photorealistic, 8k, ultra-detailed, sharp focus",
-    figure: "3d model, toy figure, miniature, detailed textures, studio lighting",
-    profile: "professional profile picture, portrait, studio lighting, high resolution",
-    drawing: "charcoal drawing, sketch, detailed lines, artistic shading",
-    poster: "movie poster, graphic design, bold typography, vibrant colors",
-    watercolor: "watercolor painting, wet-on-wet technique, soft edges, pastel colors",
-    'oil-painting': "oil painting, thick brush strokes, impasto style, rich colors",
-    cinematic: "cinematic shot, dramatic lighting, movie still, anamorphic lens flare",
-    'anime-manga': "anime style, manga, key visual, vibrant, dynamic lines",
+    figure: "highly detailed 3D full-body figure, lifelike textures on materials like plastic or resin, dynamic pose with a vivid facial expression, studio lighting setup",
+    profile: "professional model-style photograph, suitable for a profile. It could be a headshot, half-body, or full-body shot. The lighting should be high-quality studio lighting, with a clean background. High resolution, sharp focus.",
+    drawing: "detailed pencil drawing, sketch style, expressive lines, realistic shading",
+    poster: "graphic design movie poster, dynamic composition, vibrant colors. If any text is included, it should be in English and thematically appropriate for the image.",
+    watercolor: "transparent watercolor painting, delicate brush strokes, wet-on-wet technique, soft bleeding edges, luminous colors",
+    'oil-painting': "classic oil painting, visible thick brush strokes, impasto texture, rich and vibrant colors",
+    cinematic: "cinematic movie still, dramatic lighting that highlights the subject as the protagonist, masterful composition, anamorphic lens flare, high dynamic range",
+    'anime-manga': "Japanese youth anime style (Shōnen/Shōjo), vibrant key visual, dynamic lines, cinematic angle, modern animation aesthetic",
 };
 
 export const POST_PROCESSING_PROMPTS: Record<string, string> = {
