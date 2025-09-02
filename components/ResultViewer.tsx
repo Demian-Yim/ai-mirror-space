@@ -68,6 +68,8 @@ export const ResultViewer: React.FC<ResultViewerProps> = ({ media, isLoading, me
         }
     };
 
+    const promoteButtonText = appMode === 'generate' ? '✨ 이 이미지로 편집 고정' : '✨ 매직 툴로 편집';
+
     return (
         <div className="flex-grow flex items-center justify-center custom-inset p-2 rounded-2xl relative min-h-[300px]">
             {isLoading && (
@@ -109,12 +111,12 @@ export const ResultViewer: React.FC<ResultViewerProps> = ({ media, isLoading, me
                             </NeumorphicButton>
                         </div>
                     </div>
-                    {appMode === 'recompose' && media.type === 'image' && (
+                    {(appMode === 'recompose' || (appMode === 'generate' && media)) && media.type === 'image' && (
                         <NeumorphicButton
                             onClick={onPromote}
                             className="!px-4 !py-2 text-sm font-semibold"
                         >
-                           ✨ 매직 툴로 편집
+                           {promoteButtonText}
                         </NeumorphicButton>
                     )}
                 </div>

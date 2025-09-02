@@ -86,6 +86,9 @@ const App: React.FC = () => {
         if (sourceNumber === 1) {
             setSourceFile1(null);
             setSourceImage1(null);
+            // Also clear source 2 if source 1 is cleared to maintain logical flow
+            setSourceFile2(null);
+            setSourceImage2(null);
         } else {
             setSourceFile2(null);
             setSourceImage2(null);
@@ -156,7 +159,6 @@ const App: React.FC = () => {
         try {
             let result;
             let finalPrompt = prompt;
-            const isPromptOnlyGeneration = !sourceImage1 && !sourceImage2 && prompt.trim();
 
             if (appMode === 'recompose' && sourceImage1 && sourceFile1 && sourceImage2 && sourceFile2) {
                 const base64Data1 = sourceImage1.split(',')[1];
@@ -180,6 +182,18 @@ ${userHint}
 ${styleEnhancement}`;
 
                 result = await recomposeImagesWithGemini(base64Data1, mimeType1, base64Data2, mimeType2, finalPrompt);
+                 if (result.image) {
+                    const newImage: GeneratedMedia = {
+                        id: Date.now(),
+                        type: 'image',
+                        src: result.image,
+                        prompt: finalPrompt,
+                        mimeType: result.mimeType || 'image/png'
+                    };
+                    setGeneratedMedia(prev => [newImage, ...prev]);
+                    setActiveResult(newImage);
+                }
+
 
             } else if (sourceImage1 || activeResult) {
                  const imageToEditBase64 = activeResult?.src || sourceImage1;
@@ -192,8 +206,6 @@ ${styleEnhancement}`;
                 }
                 const base64Data = imageToEditBase64.split(',')[1];
                 
-                // Determine the mime type from the active result if available, otherwise from the source file.
-                // This ensures post-processing on a generated PNG result uses the correct mime type.
                 const mimeType = activeResult?.mimeType || (sourceFile1 ? getMimeType(sourceFile1) : 'image/png');
                 
                 if(modificationPrompt) {
@@ -206,6 +218,17 @@ ${styleEnhancement}`;
                     finalPrompt = `${prompt}, ${styleEnhancement}`;
                 }
                 result = await editImageWithGemini(base64Data, mimeType, finalPrompt);
+                if (result.image) {
+                    const newImage: GeneratedMedia = {
+                        id: Date.now(),
+                        type: 'image',
+                        src: result.image,
+                        prompt: finalPrompt,
+                        mimeType: result.mimeType || 'image/png'
+                    };
+                    setGeneratedMedia(prev => [newImage, ...prev]);
+                    setActiveResult(newImage);
+                }
 
             } else { // Prompt-only generation
                 if (!prompt.trim()) {
@@ -218,29 +241,17 @@ ${styleEnhancement}`;
                     finalPrompt = `${prompt}, ${styleEnhancement}`;
                 }
                 result = await generateImageWithImagen(finalPrompt, selectedAspectRatio);
-            }
-
-            if (result.image) {
-                const newImage: GeneratedMedia = {
-                    id: Date.now(),
-                    type: 'image',
-                    src: result.image,
-                    prompt: finalPrompt,
-                    mimeType: result.mimeType || 'image/png'
-                };
-                setGeneratedMedia(prev => [newImage, ...prev]);
-                setActiveResult(newImage);
-
-                if (isPromptOnlyGeneration) {
-                     // After a prompt-only generation, the result becomes the new source,
-                    // allowing for immediate editing with magic tools.
-                    setSourceImage1(newImage.src);
-                    const newSourceFile = await dataUrlToFile(newImage.src, `prompt-generated-${newImage.id}.png`, newImage.mimeType);
-                    setSourceFile1(newSourceFile);
+                if (result.image) {
+                    const newImage: GeneratedMedia = {
+                        id: Date.now(),
+                        type: 'image',
+                        src: result.image,
+                        prompt: finalPrompt,
+                        mimeType: result.mimeType || 'image/png'
+                    };
+                    setGeneratedMedia(prev => [newImage, ...prev]);
+                    setActiveResult(newImage);
                 }
-            }
-             if (result.text) {
-                console.log("Gemini says: ", result.text);
             }
             
         } catch (err) {
@@ -275,7 +286,7 @@ ${styleEnhancement}`;
         link.href = activeResult.src;
         const extension = activeResult.type === 'image' ? 'png' : 'mp4';
         const safePrompt = activeResult.prompt.replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 50);
-        const fileName = `${safePrompt || 'ai-mirror-space'}-${activeResult.id}.${extension}`;
+        const fileName = `${safePrompt || 'ai-mirror-universe'}-${activeResult.id}.${extension}`;
         link.download = fileName;
         document.body.appendChild(link);
         link.click();
@@ -305,7 +316,7 @@ ${styleEnhancement}`;
         for (const media of mediaToDownload) {
             const extension = media.type === 'image' ? 'png' : 'mp4';
             const safePrompt = media.prompt.replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 50);
-            const fileName = `${safePrompt || 'ai-mirror-space'}-${media.id}.${extension}`;
+            const fileName = `${safePrompt || 'ai-mirror-universe'}-${media.id}.${extension}`;
             const response = await fetch(media.src);
             const blob = await response.blob();
             zip.file(fileName, blob);
@@ -313,7 +324,7 @@ ${styleEnhancement}`;
         const content = await zip.generateAsync({ type: 'blob' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(content);
-        link.download = 'ai-mirror-space-gallery.zip';
+        link.download = 'ai-mirror-universe-gallery.zip';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -326,7 +337,7 @@ ${styleEnhancement}`;
         for (const media of generatedMedia) {
             const extension = media.type === 'image' ? 'png' : 'mp4';
             const safePrompt = media.prompt.replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 50);
-            const fileName = `${safePrompt || 'ai-mirror-space'}-${media.id}.${extension}`;
+            const fileName = `${safePrompt || 'ai-mirror-universe'}-${media.id}.${extension}`;
             const response = await fetch(media.src);
             const blob = await response.blob();
             zip.file(fileName, blob);
@@ -334,7 +345,7 @@ ${styleEnhancement}`;
         const content = await zip.generateAsync({ type: 'blob' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(content);
-        link.download = 'ai-mirror-space-all-media.zip';
+        link.download = 'ai-mirror-universe-all-media.zip';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -365,33 +376,52 @@ ${styleEnhancement}`;
         video: '인물에게 어떤 움직임을 줄까요? (예: 손 흔들기)'
     }[isVideoMode ? 'video' : appMode];
 
+    const isMagicToolsDisabled = isLoading || !(sourceImage1 || (activeResult && activeResult.type === 'image'));
+
     return (
         <div className="flex flex-col min-h-screen bg-[var(--bg-main)] text-[var(--text-primary)]">
             <div className="container mx-auto p-4 md:p-8 flex-grow flex flex-col">
                 <header className="text-center mb-12 animate-[fadeIn_0.5s_ease-out_forwards] opacity-0">
-                    <h1 className="text-5xl md:text-6xl neon-title">AI Mirror Space</h1>
-                    <p className="text-lg md:text-xl mt-4 text-[var(--text-secondary)] font-medium tracking-wide">AI 거울을 통해 새로운 나를 발견하는 공간</p>
+                    <h1 className="text-5xl md:text-6xl neon-title">AI Mirror Universe</h1>
+                    <p className="text-lg md:text-xl mt-4 text-[var(--text-secondary)] font-medium tracking-wide">
+                       “AI를 통해 거울 속에서 새로운 나를 발견하는 무한한 세계”
+                    </p>
+                    <p className="text-lg md:text-xl mt-2 text-[var(--text-secondary)] font-medium tracking-wide">
+                        <span className="font-bold neon-text-subtle">Persona Nexus:</span> “다양한 자아(Persona)가 연결되는 네트워크”
+                    </p>
+                    <div className="mt-6 text-xl text-[var(--text-primary)]">
+                        {isVideoMode ? (
+                            <p><span className="font-bold text-2xl">🪐 Video Universe:</span> “모든 영상이 모여 하나의 우주를 이루는 확장 공간”</p>
+                        ) : (
+                            <p><span className="font-bold text-2xl">🌌 Image Galaxy:</span> “이미지가 은하처럼 무수히 생성되고 흩어지는 창작의 장”</p>
+                        )}
+                    </div>
                 </header>
 
                 <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
                     <aside className="lg:col-span-3 flex flex-col gap-6 animate-[fadeIn_0.5s_ease-out_forwards] opacity-0" style={{ animationDelay: '200ms' }}>
                         <NeumorphicPanel className="flex-1 flex flex-col">
-                            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">{isVideoMode ? '애니메이션 소스' : source1Title[appMode]}</h2>
+                            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">{isVideoMode ? '애니메이션 소스' : '1. 메인 소스'}</h2>
                             <ImageUploader onImageUpload={(file) => handleImageUpload(file, 1)} onClear={() => handleImageClear(1)} sourceImage={sourceImage1} />
                         </NeumorphicPanel>
-                         <div className={`flex-1 flex flex-col transition-opacity duration-300 ${isVideoMode ? 'opacity-0 pointer-events-none h-0' : 'opacity-100 h-auto'}`}>
-                            <NeumorphicPanel className="h-full flex flex-col">
-                                <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">{source2Title[appMode]}</h2>
-                                <ImageUploader onImageUpload={(file) => handleImageUpload(file, 2)} onClear={() => handleImageClear(2)} sourceImage={sourceImage2} />
+                         { !isVideoMode &&
+                            <NeumorphicPanel className="flex-1 flex flex-col">
+                                <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">2. 추가 소스 (스타일 & 배경)</h2>
+                                <ImageUploader
+                                    onImageUpload={(file) => handleImageUpload(file, 2)}
+                                    onClear={() => handleImageClear(2)}
+                                    sourceImage={sourceImage2}
+                                    disabled={!sourceImage1}
+                                />
                             </NeumorphicPanel>
-                        </div>
+                        }
                     </aside>
 
                     <fieldset disabled={isLoading} className="lg:col-span-6 flex flex-col animate-[fadeIn_0.5s_ease-out_forwards] opacity-0 transition-opacity duration-300 disabled:opacity-50 disabled:cursor-wait" style={{ animationDelay: '400ms' }}>
                         <section className="space-y-6 flex flex-col flex-grow">
                              <div className="flex bg-[var(--panel-bg-solid)] p-1 rounded-full border border-[var(--border-color)]">
-                                <button onClick={() => setStudioMode('image')} className={`flex-1 py-2 text-center rounded-full transition-colors ${!isVideoMode ? 'bg-[var(--accent-color)] text-white font-bold' : 'text-[var(--text-secondary)] hover:text-white'}`}>📷 이미지 스튜디오</button>
-                                <button onClick={() => setStudioMode('video')} className={`flex-1 py-2 text-center rounded-full transition-colors ${isVideoMode ? 'bg-[var(--accent-color)] text-white font-bold' : 'text-[var(--text-secondary)] hover:text-white'}`}>🎬 비디오 페르소나</button>
+                                <button onClick={() => setStudioMode('image')} className={`flex-1 py-2 text-center rounded-full transition-colors ${!isVideoMode ? 'bg-[var(--accent-color)] text-white font-bold' : 'text-[var(--text-secondary)] hover:text-white'}`}>🌌 Image Galaxy</button>
+                                <button onClick={() => setStudioMode('video')} className={`flex-1 py-2 text-center rounded-full transition-colors ${isVideoMode ? 'bg-[var(--accent-color)] text-white font-bold' : 'text-[var(--text-secondary)] hover:text-white'}`}>🪐 Video Universe</button>
                             </div>
 
                             <NeumorphicPanel>
@@ -420,11 +450,11 @@ ${styleEnhancement}`;
                                 </NeumorphicPanel>
                             </div>
 
-                            <div className={`transition-opacity duration-300 ${isVideoMode || appMode === 'recompose' ? 'opacity-40 pointer-events-none' : ''}`}>
-                                <NeumorphicPanel className="neon-glow-panel">
-                                    <h2 className="text-xl font-bold text-[var(--text-primary)] text-center mb-2">✨ AI Magic Tools</h2>
+                            <div className={`transition-opacity duration-300 ${isVideoMode ? 'opacity-40 pointer-events-none' : ''}`}>
+                                <NeumorphicPanel className={`neon-glow-panel ${isMagicToolsDisabled ? 'opacity-40' : ''}`}>
+                                    <h2 className="text-xl font-bold text-[var(--text-primary)] text-center mb-2">4. ✨ AI Magic Tools</h2>
                                     <p className="text-xs text-center text-[var(--text-secondary)] mb-6">결과물에 적용하여 연속적으로 수정할 수 있습니다.</p>
-                                    <PostProcessingControls onModify={handleCreate} disabled={isLoading || !sourceImage1} />
+                                    <PostProcessingControls onModify={handleCreate} disabled={isMagicToolsDisabled} />
                                 </NeumorphicPanel>
                             </div>
                             
@@ -482,29 +512,11 @@ ${styleEnhancement}`;
                  <GalleryModal images={generatedMedia} startIndex={modalImageIndex} onClose={closeModal}/>
             )}
             
-            <div className="text-center py-12 px-4 mt-8">
-                <blockquote className="max-w-3xl mx-auto text-lg text-[var(--text-secondary)] italic">
-                    <p>"거울은 현재의 나를 보여주지만, 아바타는 가능성의 나를 보여줍니다.<br />AI 거울 속에서, 당신의 무한한 자아를 탐색하세요."</p>
-                </blockquote>
-            </div>
-
-            <footer className="text-center py-8 text-[var(--text-tertiary)] text-base">
+            <footer className="text-center py-8 text-[var(--text-tertiary)] text-base mt-8 border-t border-[var(--border-color)]">
                 <p className="font-semibold neon-text-subtle">© Created by Demian 임정훈</p>
             </footer>
         </div>
     );
-};
-
-// Helper titles - keeping them local as they are only used here
-const source1Title: Record<string, string> = {
-    generate: '소스 1 (선택사항)',
-    edit: '편집할 이미지',
-    recompose: '주요 피사체 (인물)'
-};
-const source2Title: Record<string, string> = {
-    generate: '소스 2 (선택사항)',
-    edit: '소스 2 (결합 시 사용)',
-    recompose: '스타일 & 배경'
 };
 
 export default App;

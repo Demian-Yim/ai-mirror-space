@@ -23,8 +23,8 @@ export const ASPECT_RATIOS: AspectRatio[] = [
 export const ENHANCEMENT_PROMPTS: Record<string, string> = {
     photorealistic: "photorealistic, 8k, ultra-detailed, sharp focus",
     figure: "highly detailed 3D full-body figure, lifelike textures on materials like plastic or resin, dynamic pose with a vivid facial expression, studio lighting setup",
-    profile: "professional model-style photograph, suitable for a profile. It could be a headshot, half-body, or full-body shot. The lighting should be high-quality studio lighting, with a clean background. High resolution, sharp focus.",
-    drawing: "detailed pencil drawing, sketch style, expressive lines, realistic shading",
+    profile: "professional model-style photograph, suitable for a profile. It could be a headshot, half-body, or full-body shot. Pay careful attention to flattering the skin tone and creating a beautiful, soft lighting setup. The lighting should be high-quality studio lighting, with a clean background. High resolution, sharp focus.",
+    drawing: "black and white detailed pencil drawing, monochrome sketch style, expressive lines, realistic shading",
     poster: "graphic design movie poster, dynamic composition, vibrant colors. If any text is included, it should be in English and thematically appropriate for the image.",
     watercolor: "transparent watercolor painting, delicate brush strokes, wet-on-wet technique, soft bleeding edges, luminous colors",
     'oil-painting': "classic oil painting, visible thick brush strokes, impasto texture, rich and vibrant colors",

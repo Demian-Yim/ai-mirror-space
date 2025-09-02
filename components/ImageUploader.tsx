@@ -4,9 +4,10 @@ interface ImageUploaderProps {
     onImageUpload: (file: File) => void;
     onClear: () => void;
     sourceImage: string | null;
+    disabled?: boolean;
 }
 
-export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, onClear, sourceImage }) => {
+export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, onClear, sourceImage, disabled = false }) => {
     const inputRef = useRef<HTMLInputElement>(null);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -19,7 +20,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, onC
     };
     
     const handleClick = () => {
-        if (!sourceImage) {
+        if (!sourceImage && !disabled) {
             inputRef.current?.click();
         }
     };
@@ -31,8 +32,9 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, onC
 
     return (
         <div 
-            className="flex-grow flex items-center justify-center custom-inset p-2 rounded-2xl cursor-pointer min-h-[200px] relative group"
+            className={`flex-grow flex items-center justify-center custom-inset p-2 rounded-2xl min-h-[200px] relative transition-opacity duration-300 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer group'}`}
             onClick={handleClick}
+            title={disabled ? '메인 소스를 먼저 업로드해주세요.' : '이미지 업로드'}
         >
             <input
                 type="file"
@@ -40,6 +42,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, onC
                 className="hidden"
                 accept="image/*"
                 onChange={handleFileChange}
+                disabled={disabled}
             />
             {sourceImage ? (
                 <>
@@ -55,10 +58,17 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, onC
                     </button>
                 </>
             ) : (
-                <div className="text-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                    <span className="text-4xl mb-2 block">↑</span>
-                    <span className="font-semibold text-base">Upload Image</span>
-                </div>
+                disabled ? (
+                     <div className="text-center text-[var(--text-tertiary)]">
+                        <span className="text-4xl mb-2 block">🔒</span>
+                        <span className="font-semibold text-base leading-tight">메인 소스를 먼저<br/>업로드해주세요.</span>
+                    </div>
+                ) : (
+                    <div className="text-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+                        <span className="text-4xl mb-2 block">↑</span>
+                        <span className="font-semibold text-base">Upload Image</span>
+                    </div>
+                )
             )}
         </div>
     );
