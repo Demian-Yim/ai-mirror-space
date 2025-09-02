@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { NeumorphicButton } from './NeumorphicButton';
 import { POST_PROCESSING_PROMPTS } from '../constants';
 
@@ -37,18 +38,28 @@ const expressionButtons = [
 export const PostProcessingControls: React.FC<PostProcessingControlsProps> = ({ onModify, disabled }) => {
     const [ageValue, setAgeValue] = useState(0);
     const debouncedAgeValue = useDebounce(ageValue, 500); // 500ms delay
+    const lastTriggeredAgeValue = useRef<number | null>(null);
+    
+    // useRef to hold the latest onModify callback. This prevents the effect from
+    // re-running every time the parent component re-renders and creates a new function.
+    const onModifyRef = useRef(onModify);
+    useEffect(() => {
+        onModifyRef.current = onModify;
+    }, [onModify]);
 
     // Effect to trigger modification when debounced value changes
     useEffect(() => {
-        if (debouncedAgeValue !== 0) {
-            onModify('', debouncedAgeValue);
+        // Only call onModify if the debounced value is not 0 and is different from the last value that triggered the call.
+        if (debouncedAgeValue !== 0 && debouncedAgeValue !== lastTriggeredAgeValue.current) {
+            onModifyRef.current('', debouncedAgeValue);
+            lastTriggeredAgeValue.current = debouncedAgeValue;
         }
-         // Reset internal state if the slider goes back to 0 to avoid re-triggering
-        if (debouncedAgeValue === 0 && ageValue !== 0) {
-           // This effect is mainly for triggering, no reset logic needed here
-           // as the parent component's `onModify` handles the logic.
+
+        // If the slider is moved back to 0, reset the ref to allow triggering again.
+        if (debouncedAgeValue === 0) {
+            lastTriggeredAgeValue.current = null;
         }
-    }, [debouncedAgeValue, onModify]);
+    }, [debouncedAgeValue]); // The effect now only depends on the debounced value, preventing the loop.
 
 
     return (

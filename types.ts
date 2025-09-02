@@ -1,13 +1,13 @@
-
 export interface Style {
     id: string;
     name: string;
     icon: string;
 }
 
-export interface GeneratedImage {
+export interface GeneratedMedia {
     id: number;
-    src: string;
+    type: 'image' | 'video';
+    src: string; // dataURL for image, blobURL for video
     prompt: string;
     mimeType: string;
 }

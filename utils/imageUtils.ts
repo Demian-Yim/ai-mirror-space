@@ -11,8 +11,9 @@ export const getMimeType = (file: File): string => {
     return file.type || 'image/png';
 };
 
-export const dataUrlToFile = async (dataUrl: string, fileName: string): Promise<File> => {
+export const dataUrlToFile = async (dataUrl: string, fileName: string, mimeType?: string): Promise<File> => {
     const res = await fetch(dataUrl);
     const blob = await res.blob();
-    return new File([blob], fileName, { type: blob.type });
+    const finalMimeType = mimeType || blob.type;
+    return new File([blob], fileName, { type: finalMimeType });
 };

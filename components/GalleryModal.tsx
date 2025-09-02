@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
-import type { GeneratedImage } from '../types';
+import type { GeneratedMedia } from '../types';
 
 interface GalleryModalProps {
-    images: GeneratedImage[];
+    images: GeneratedMedia[];
     startIndex: number;
     onClose: () => void;
 }
@@ -29,8 +29,8 @@ export const GalleryModal: React.FC<GalleryModalProps> = ({ images, startIndex, 
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [onClose, handleNext, handlePrev]);
 
-    const currentImage = images[currentIndex];
-    if (!currentImage) return null;
+    const currentMedia = images[currentIndex];
+    if (!currentMedia) return null;
 
     const modalContent = (
         <div 
@@ -41,13 +41,25 @@ export const GalleryModal: React.FC<GalleryModalProps> = ({ images, startIndex, 
                 className="relative bg-[var(--panel-bg)] p-4 rounded-2xl shadow-2xl max-w-4xl max-h-[90vh] w-[90%] flex flex-col border border-[var(--border-color)]"
                 onClick={(e) => e.stopPropagation()}
             >
-                <img 
-                    src={currentImage.src} 
-                    alt={currentImage.prompt} 
-                    className="w-full h-full object-contain rounded-lg"
-                />
+                <div className="flex-grow flex items-center justify-center min-h-0">
+                    {currentMedia.type === 'image' ? (
+                        <img 
+                            src={currentMedia.src} 
+                            alt={currentMedia.prompt} 
+                            className="max-w-full max-h-full object-contain rounded-lg"
+                        />
+                    ) : (
+                        <video 
+                            src={currentMedia.src} 
+                            controls 
+                            autoPlay 
+                            loop 
+                            className="max-w-full max-h-full object-contain rounded-lg"
+                        />
+                    )}
+                </div>
                 <p className="w-full text-center p-2 mt-4 custom-inset rounded-lg text-sm text-[var(--text-secondary)]">
-                    {currentImage.prompt}
+                    {currentMedia.prompt}
                 </p>
                  <button onClick={onClose} className="absolute -top-4 -right-4 bg-[var(--panel-bg)] rounded-full p-2 shadow-lg hover:scale-110 transition-transform border border-[var(--border-color)]">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-[var(--text-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>

@@ -34,8 +34,8 @@ export const ENHANCEMENT_PROMPTS: Record<string, string> = {
 
 export const POST_PROCESSING_PROMPTS: Record<string, string> = {
     upscale: "Upscale to 4k resolution, enhance details, sharpen image",
-    pretty: "Make the image more beautiful, aesthetically pleasing, add soft lighting, dreamy atmosphere",
-    cool: "Make the image look cooler, more dynamic, add dramatic shadows, high contrast",
+    pretty: "Enhance the subject's beauty with a focus on natural, glowing skin, subtle and elegant makeup, and soft, flattering lighting. If appropriate, add a simple, tasteful accessory like a small earring or a delicate necklace to complement the look. Make the overall atmosphere more dreamy and aesthetically pleasing.",
+    cool: "Transform the subject to look cooler and more stylish. Give them a confident expression, add dynamic, high-contrast lighting, and sharpen the details. If appropriate, add a suitable accessory like modern sunglasses or a leather jacket. The overall mood should be more edgy and dynamic.",
     joy: "Change the expression to joyful and happy 😊",
     sadness: "Change the expression to sad and melancholic 😢",
     anger: "Change the expression to angry and furious 😠",
@@ -53,4 +53,14 @@ export const INSPIRATION_PROMPTS: string[] = [
     "로봇 부품과 미래적인 도시를 배경으로 한 사이버펑크 스타일",
     "빈센트 반 고흐의 화풍으로 그린 초상화",
     "내 얼굴을 미니멀한 라인 아트로 드로잉"
+];
+
+export const VIDEO_LOADING_MESSAGES: string[] = [
+    "애니메이션 엔진을 준비 중입니다...",
+    "페르소나의 키프레임을 스케치하고 있습니다...",
+    "디지털 촬영 감독과 상의 중입니다...",
+    "초반 몇 초의 움직임을 렌더링하고 있습니다...",
+    "고급 시각 효과를 적용하고 있습니다...",
+    "마지막 프레임을 다듬고 있습니다...",
+    "거의 다 왔습니다. 시사회를 준비하세요!"
 ];

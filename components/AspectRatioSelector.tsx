@@ -1,3 +1,5 @@
+
+
 import React from 'react';
 import type { AspectRatio } from '../types';
 import { NeumorphicButton } from './NeumorphicButton';
@@ -33,8 +35,8 @@ export const AspectRatioSelector: React.FC<AspectRatioSelectorProps> = ({
                 ))}
             </div>
             {disabled && (
-                 <p className="text-xs text-center text-gray-500 mt-3">
-                    이미지 생성 시에만 비율 선택이 가능합니다.
+                 <p className="text-xs text-center text-[var(--text-secondary)] mt-3">
+                    사진 비율은 프롬프트만으로 이미지를 생성할 때만 사용할 수 있습니다.
                 </p>
             )}
         </div>
