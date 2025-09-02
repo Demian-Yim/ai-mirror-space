@@ -1,12 +1,22 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 
-const API_KEY = process.env.API_KEY;
+let ai: GoogleGenAI | null = null;
 
-if (!API_KEY) {
-    throw new Error("API_KEY environment variable not set. Please check your deployment settings.");
+export const initializeGoogleGenAI = (apiKey: string) => {
+    if (!apiKey) {
+        console.error("API Key is missing for initialization");
+        ai = null;
+        return;
+    }
+    ai = new GoogleGenAI({ apiKey });
+};
+
+const getAiClient = (): GoogleGenAI => {
+    if (!ai) {
+        throw new Error("AI 클라이언트가 초기화되지 않았습니다. API 키를 설정해주세요.");
+    }
+    return ai;
 }
-
-const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 interface AiImageResult {
     image: string;
@@ -58,8 +68,9 @@ export const editImageWithGemini = async (
     mimeType: string,
     prompt: string
 ): Promise<AiImageResult> => {
+    const aiClient = getAiClient();
     try {
-        const response = await ai.models.generateContent({
+        const response = await aiClient.models.generateContent({
             model: 'gemini-2.5-flash-image-preview',
             contents: {
                 parts: [
@@ -91,8 +102,9 @@ export const recomposeImagesWithGemini = async (
     mimeType2: string,
     prompt: string
 ): Promise<AiImageResult> => {
+    const aiClient = getAiClient();
     try {
-        const response = await ai.models.generateContent({
+        const response = await aiClient.models.generateContent({
             model: 'gemini-2.5-flash-image-preview',
             contents: {
                 parts: [
@@ -129,8 +141,9 @@ export const generateImageWithImagen = async (
     prompt: string,
     aspectRatio: string,
 ): Promise<AiImageResult> => {
+    const aiClient = getAiClient();
     try {
-        const response = await ai.models.generateImages({
+        const response = await aiClient.models.generateImages({
             model: 'imagen-4.0-generate-001',
             prompt: prompt,
             config: {
@@ -167,9 +180,10 @@ export const generateVideoWithVeo = async (
     prompt: string,
     onProgress: (message: string) => void
 ): Promise<AiVideoResult> => {
+    const aiClient = getAiClient();
     try {
         onProgress("비디오 생성을 시작합니다...");
-        let operation = await ai.models.generateVideos({
+        let operation = await aiClient.models.generateVideos({
             model: 'veo-2.0-generate-001',
             prompt: prompt,
             image: {
@@ -187,7 +201,7 @@ export const generateVideoWithVeo = async (
         while (!operation.done && pollCount < maxPolls) {
             onProgress(`처리 중... (시도 ${pollCount + 1}/${maxPolls})`);
             await new Promise(resolve => setTimeout(resolve, 10000)); // Poll every 10 seconds
-            operation = await ai.operations.getVideosOperation({ operation: operation });
+            operation = await aiClient.operations.getVideosOperation({ operation: operation });
             pollCount++;
         }
 
@@ -201,7 +215,9 @@ export const generateVideoWithVeo = async (
         }
 
         onProgress("생성된 비디오를 다운로드 중입니다...");
-        const response = await fetch(`${downloadLink}&key=${API_KEY}`);
+        // NOTE: The fetch call for the video doesn't need the API key in the URL
+        // when called from the browser, as the SDK handles authentication.
+        const response = await fetch(downloadLink);
         if (!response.ok) {
             throw new Error(`비디오 다운로드 실패: ${response.statusText}`);
         }

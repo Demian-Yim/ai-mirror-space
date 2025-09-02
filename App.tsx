@@ -1,6 +1,6 @@
 
 
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { ImageUploader } from './components/ImageUploader';
 import { StyleSelector } from './components/StyleSelector';
 import { AspectRatioSelector } from './components/AspectRatioSelector';
@@ -11,9 +11,10 @@ import { GalleryModal } from './components/GalleryModal';
 import { MixerControls } from './components/MixerControls';
 import { NeumorphicPanel } from './components/NeumorphicPanel';
 import { NeumorphicButton } from './components/NeumorphicButton';
+import { ApiKeyModal } from './components/ApiKeyModal';
 import { STYLES, ENHANCEMENT_PROMPTS, INSPIRATION_PROMPTS, ASPECT_RATIOS, VIDEO_LOADING_MESSAGES } from './constants';
 import type { Style, GeneratedMedia, AspectRatio, AppMessage } from './types';
-import { editImageWithGemini, generateImageWithImagen, recomposeImagesWithGemini, generateVideoWithVeo } from './services/geminiService';
+import { editImageWithGemini, generateImageWithImagen, recomposeImagesWithGemini, generateVideoWithVeo, initializeGoogleGenAI } from './services/geminiService';
 import { dataUrlToFile, getMimeType } from './utils/imageUtils';
 
 declare const JSZip: any;
@@ -25,6 +26,10 @@ interface MixerValues {
 }
 
 const App: React.FC = () => {
+    // API Key State
+    const [apiKey, setApiKey] = useState<string | null>(null);
+    const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+
     // Core state
     const [sourceImage1, setSourceImage1] = useState<string | null>(null);
     const [sourceFile1, setSourceFile1] = useState<File | null>(null);
@@ -44,7 +49,7 @@ const App: React.FC = () => {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [message, setMessage] = useState<AppMessage | null>(null);
     const [loadingMessage, setLoadingMessage] = useState<string>('');
-    const loadingMessageInterval = useRef<NodeJS.Timeout | null>(null);
+    const loadingMessageInterval = useRef<number | null>(null);
 
     // App mode state
     const [studioMode, setStudioMode] = useState<'image' | 'video'>('image');
@@ -54,6 +59,25 @@ const App: React.FC = () => {
     const [selectedMediaIds, setSelectedMediaIds] = useState<Set<number>>(new Set());
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [modalImageIndex, setModalImageIndex] = useState<number | null>(null);
+
+    useEffect(() => {
+        const storedApiKey = localStorage.getItem('gemini_api_key');
+        if (storedApiKey) {
+            setApiKey(storedApiKey);
+            initializeGoogleGenAI(storedApiKey);
+        } else {
+            setIsApiKeyModalOpen(true);
+        }
+    }, []);
+
+    const handleApiKeySubmit = (key: string) => {
+        if (key) {
+            setApiKey(key);
+            localStorage.setItem('gemini_api_key', key);
+            initializeGoogleGenAI(key);
+            setIsApiKeyModalOpen(false);
+        }
+    };
     
     const appMode = useMemo(() => {
         if (sourceImage1 && sourceImage2) return 'recompose';
@@ -68,9 +92,7 @@ const App: React.FC = () => {
             if (sourceNumber === 1) {
                 setSourceFile1(file);
                 setSourceImage1(result);
-                 // If a prompt-only result was active, uploading a source image overrides it
-                // for the next edit operation, providing a clearer user workflow.
-                if (appMode !== 'recompose') {
+                 if (appMode !== 'recompose') {
                     setActiveResult(null);
                 }
             } else {
@@ -85,7 +107,6 @@ const App: React.FC = () => {
         if (sourceNumber === 1) {
             setSourceFile1(null);
             setSourceImage1(null);
-            // Also clear source 2 if source 1 is cleared to maintain logical flow
             setSourceFile2(null);
             setSourceImage2(null);
         } else {
@@ -100,11 +121,14 @@ const App: React.FC = () => {
     };
 
     const handleCreate = useCallback(async (modificationPrompt: string = '', ageModification: number | null = null) => {
+        if (!apiKey) {
+            setIsApiKeyModalOpen(true);
+            return;
+        }
         setIsLoading(true);
         setMessage(null);
         setLoadingMessage('');
 
-        // ===== VIDEO GENERATION LOGIC =====
         if (studioMode === 'video') {
             if (!sourceImage1 || !sourceFile1) {
                 setMessage({ text: '비디오를 생성하려면 소스 이미지를 업로드해주세요.', type: 'warning' });
@@ -119,7 +143,7 @@ const App: React.FC = () => {
             try {
                 let messageIndex = 0;
                 setLoadingMessage(VIDEO_LOADING_MESSAGES[messageIndex]);
-                loadingMessageInterval.current = setInterval(() => {
+                loadingMessageInterval.current = window.setInterval(() => {
                     messageIndex = (messageIndex + 1) % VIDEO_LOADING_MESSAGES.length;
                     setLoadingMessage(VIDEO_LOADING_MESSAGES[messageIndex]);
                 }, 4000);
@@ -154,7 +178,6 @@ const App: React.FC = () => {
             return;
         }
 
-        // ===== IMAGE GENERATION LOGIC =====
         try {
             let result;
             let finalPrompt = prompt;
@@ -171,7 +194,6 @@ const App: React.FC = () => {
                 const backgroundPrompt = `The background should be a blend, taking ${backgroundMix}% from the second image's background and ${100-backgroundMix}% from the first image's background.`;
                 const userHint = prompt.trim() ? `An additional user instruction: "${prompt}"` : "Create a seamless and realistic blend.";
                 const styleEnhancement = selectedStyle ? `Additionally, render the final image in a ${ENHANCEMENT_PROMPTS[selectedStyle]} style.` : '';
-
 
                 finalPrompt = `You are an expert image mixer. Combine the two provided images according to these rules:
 1. ${identityPrompt}
@@ -192,7 +214,6 @@ ${styleEnhancement}`;
                     setGeneratedMedia(prev => [newImage, ...prev]);
                     setActiveResult(newImage);
                 }
-
 
             } else if (sourceImage1 || activeResult) {
                  const imageToEditBase64 = activeResult?.src || sourceImage1;
@@ -229,7 +250,7 @@ ${styleEnhancement}`;
                     setActiveResult(newImage);
                 }
 
-            } else { // Prompt-only generation
+            } else { 
                 if (!prompt.trim()) {
                     setMessage({ text: '이미지를 생성하려면 프롬프트를 입력해주세요.', type: 'warning' });
                     setIsLoading(false);
@@ -260,7 +281,7 @@ ${styleEnhancement}`;
         } finally {
             setIsLoading(false);
         }
-    }, [studioMode, sourceImage1, sourceFile1, sourceImage2, sourceFile2, prompt, selectedStyle, activeResult, selectedAspectRatio, mixerValues, appMode]);
+    }, [studioMode, sourceImage1, sourceFile1, sourceImage2, sourceFile2, prompt, selectedStyle, activeResult, selectedAspectRatio, mixerValues, appMode, apiKey]);
     
     const handlePromoteResultToSource = useCallback(async () => {
         if (!activeResult || activeResult.type !== 'image') return;
@@ -276,7 +297,7 @@ ${styleEnhancement}`;
         }
     }, [activeResult]);
 
-    const handleStyleSelect = (styleId: Style['id']) => setSelectedStyle(prev => (prev === styleId ? null : styleId));
+    const handleStyleSelect = (styleId: Style['id']) => setSelectedStyle(prev => (prev === styleId ? null : prev));
     const handleAspectRatioSelect = (aspectRatioId: AspectRatio['id']) => setSelectedAspectRatio(aspectRatioId);
     
     const handleDownloadActiveMedia = useCallback(() => {
@@ -377,15 +398,21 @@ ${styleEnhancement}`;
 
     const isMagicToolsDisabled = isLoading || !(sourceImage1 || (activeResult && activeResult.type === 'image'));
 
+    if (!apiKey && !isApiKeyModalOpen) {
+        return null; // Render nothing until we know if we need to show the modal
+    }
+    
     return (
         <div className="flex flex-col min-h-screen bg-[var(--bg-main)] text-[var(--text-primary)]">
-            <div className="container mx-auto p-4 md:p-8 flex-grow flex flex-col">
+            {isApiKeyModalOpen && <ApiKeyModal onSubmit={handleApiKeySubmit} />}
+
+            <div className={`container mx-auto p-4 md:p-8 flex-grow flex flex-col ${isApiKeyModalOpen ? 'blur-sm' : ''}`}>
                 <header className="text-center mb-8 animate-[fadeIn_0.5s_ease-out_forwards] opacity-0">
                     <h1 className="text-5xl md:text-6xl neon-title">AI Mirror Universe</h1>
                     <p className="text-lg md:text-xl mt-4 text-[var(--text-secondary)] font-medium tracking-wide">
                        “AI를 통해 거울 속에서 새로운 나를 발견하는 무한한 세계”
                     </p>
-                    <div className="mt-8 max-w-2xl mx-auto">
+                     <div className="mt-8 max-w-2xl mx-auto">
                         <NeumorphicPanel className="!p-4 neon-glow-panel">
                             <p className="text-lg md:text-xl text-center text-[var(--text-secondary)] font-medium tracking-wide">
                                 <span className="font-bold neon-text-subtle">Persona Nexus:</span> “다양한 자아(Persona)가 연결되는 네트워크”
@@ -415,26 +442,20 @@ ${styleEnhancement}`;
 
                     <fieldset disabled={isLoading} className="lg:col-span-6 flex flex-col animate-[fadeIn_0.5s_ease-out_forwards] opacity-0 transition-opacity duration-300 disabled:opacity-50 disabled:cursor-wait" style={{ animationDelay: '400ms' }}>
                         <section className="space-y-6 flex flex-col flex-grow">
-                             <div className="flex bg-[var(--panel-bg-solid)] p-1 rounded-full border border-[var(--border-color)]">
-                                <button onClick={() => setStudioMode('image')} className={`flex-1 py-2 text-center rounded-full transition-colors ${!isVideoMode ? 'bg-[var(--accent-color)] text-white font-bold' : 'text-[var(--text-secondary)] hover:text-white'}`}>🌌 Image Galaxy</button>
-                                <button onClick={() => setStudioMode('video')} className={`flex-1 py-2 text-center rounded-full transition-colors ${isVideoMode ? 'bg-[var(--accent-color)] text-white font-bold' : 'text-[var(--text-secondary)] hover:text-white'}`}>🪐 Video Universe</button>
-                            </div>
-                            
-                            <div className="text-center animate-[fadeIn_0.3s]">
-                                {isVideoMode ? (
-                                    <div>
-                                        <h2 className="font-bold text-2xl mb-1 neon-text-subtle">🪐 Video Universe</h2>
+                            <NeumorphicPanel>
+                                <div className="flex bg-[var(--panel-bg-solid)] p-1 rounded-full border border-[var(--border-color)]">
+                                    <button onClick={() => setStudioMode('image')} className={`flex-1 py-2 text-center rounded-full transition-colors ${!isVideoMode ? 'bg-[var(--accent-color)] text-white font-bold' : 'text-[var(--text-secondary)] hover:text-white'}`}>🌌 Image Galaxy</button>
+                                    <button onClick={() => setStudioMode('video')} className={`flex-1 py-2 text-center rounded-full transition-colors ${isVideoMode ? 'bg-[var(--accent-color)] text-white font-bold' : 'text-[var(--text-secondary)] hover:text-white'}`}>🪐 Video Universe</button>
+                                </div>
+                                <div className="text-center mt-4 animate-[fadeIn_0.3s]">
+                                    {isVideoMode ? (
                                         <p className="text-md text-[var(--text-secondary)]">“모든 영상이 모여 하나의 우주를 이루는 확장 공간”</p>
-                                    </div>
-                                ) : (
-                                    <div>
-                                        <h2 className="font-bold text-2xl mb-1 neon-text-subtle">🌌 Image Galaxy</h2>
+                                    ) : (
                                         <p className="text-md text-[var(--text-secondary)]">“이미지가 은하처럼 무수히 생성되고 흩어지는 창작의 장”</p>
-                                    </div>
-                                )}
-                            </div>
-
-
+                                    )}
+                                </div>
+                            </NeumorphicPanel>
+                            
                             <NeumorphicPanel>
                                  <div className="flex justify-between items-center mb-4">
                                     <h2 className="text-xl font-bold text-[var(--text-primary)]">1. 프롬프트 입력</h2>
