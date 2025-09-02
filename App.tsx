@@ -381,20 +381,17 @@ ${styleEnhancement}`;
     return (
         <div className="flex flex-col min-h-screen bg-[var(--bg-main)] text-[var(--text-primary)]">
             <div className="container mx-auto p-4 md:p-8 flex-grow flex flex-col">
-                <header className="text-center mb-12 animate-[fadeIn_0.5s_ease-out_forwards] opacity-0">
+                <header className="text-center mb-8 animate-[fadeIn_0.5s_ease-out_forwards] opacity-0">
                     <h1 className="text-5xl md:text-6xl neon-title">AI Mirror Universe</h1>
                     <p className="text-lg md:text-xl mt-4 text-[var(--text-secondary)] font-medium tracking-wide">
                        “AI를 통해 거울 속에서 새로운 나를 발견하는 무한한 세계”
                     </p>
-                    <p className="text-lg md:text-xl mt-2 text-[var(--text-secondary)] font-medium tracking-wide">
-                        <span className="font-bold neon-text-subtle">Persona Nexus:</span> “다양한 자아(Persona)가 연결되는 네트워크”
-                    </p>
-                    <div className="mt-6 text-xl text-[var(--text-primary)]">
-                        {isVideoMode ? (
-                            <p><span className="font-bold text-2xl">🪐 Video Universe:</span> “모든 영상이 모여 하나의 우주를 이루는 확장 공간”</p>
-                        ) : (
-                            <p><span className="font-bold text-2xl">🌌 Image Galaxy:</span> “이미지가 은하처럼 무수히 생성되고 흩어지는 창작의 장”</p>
-                        )}
+                    <div className="mt-8 max-w-2xl mx-auto">
+                        <NeumorphicPanel className="!p-4 neon-glow-panel">
+                            <p className="text-lg md:text-xl text-center text-[var(--text-secondary)] font-medium tracking-wide">
+                                <span className="font-bold neon-text-subtle">Persona Nexus:</span> “다양한 자아(Persona)가 연결되는 네트워크”
+                            </p>
+                        </NeumorphicPanel>
                     </div>
                 </header>
 
@@ -423,6 +420,21 @@ ${styleEnhancement}`;
                                 <button onClick={() => setStudioMode('image')} className={`flex-1 py-2 text-center rounded-full transition-colors ${!isVideoMode ? 'bg-[var(--accent-color)] text-white font-bold' : 'text-[var(--text-secondary)] hover:text-white'}`}>🌌 Image Galaxy</button>
                                 <button onClick={() => setStudioMode('video')} className={`flex-1 py-2 text-center rounded-full transition-colors ${isVideoMode ? 'bg-[var(--accent-color)] text-white font-bold' : 'text-[var(--text-secondary)] hover:text-white'}`}>🪐 Video Universe</button>
                             </div>
+                            
+                            <div className="text-center animate-[fadeIn_0.3s]">
+                                {isVideoMode ? (
+                                    <div>
+                                        <h2 className="font-bold text-2xl mb-1 neon-text-subtle">🪐 Video Universe</h2>
+                                        <p className="text-md text-[var(--text-secondary)]">“모든 영상이 모여 하나의 우주를 이루는 확장 공간”</p>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <h2 className="font-bold text-2xl mb-1 neon-text-subtle">🌌 Image Galaxy</h2>
+                                        <p className="text-md text-[var(--text-secondary)]">“이미지가 은하처럼 무수히 생성되고 흩어지는 창작의 장”</p>
+                                    </div>
+                                )}
+                            </div>
+
 
                             <NeumorphicPanel>
                                  <div className="flex justify-between items-center mb-4">
