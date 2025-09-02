@@ -1,7 +1,6 @@
 
 
 import React, { useState, useCallback, useMemo, useRef } from 'react';
-import ReactDOM from 'react-dom';
 import { ImageUploader } from './components/ImageUploader';
 import { StyleSelector } from './components/StyleSelector';
 import { AspectRatioSelector } from './components/AspectRatioSelector';
