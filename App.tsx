@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { ImageUploader } from './components/ImageUploader';
 import { StyleSelector } from './components/StyleSelector';
@@ -14,8 +12,7 @@ import { NeumorphicPanel } from './components/NeumorphicPanel';
 import { NeumorphicButton } from './components/NeumorphicButton';
 import { STYLES, ENHANCEMENT_PROMPTS, INSPIRATION_PROMPTS, ASPECT_RATIOS, VIDEO_LOADING_MESSAGES } from './constants';
 import type { Style, GeneratedMedia, AspectRatio, AppMessage } from './types';
-// FIX: Removed initAiClient as it's no longer needed. The client is initialized automatically in the service.
-import { editImageWithGemini, generateImageWithImagen, recomposeImagesWithGemini, generateVideoWithVeo } from './services/geminiService';
+import { initAiClient, editImageWithGemini, generateImageWithImagen, recomposeImagesWithGemini, generateVideoWithVeo } from './services/geminiService';
 import { dataUrlToFile, getMimeType } from './utils/imageUtils';
 
 declare const JSZip: any;
@@ -27,8 +24,9 @@ interface MixerValues {
 }
 
 const App: React.FC = () => {
-    // FIX: Removed API key state and initialization logic to comply with guidelines.
-    // The application now relies on the API key being set in the environment.
+    // Initialization State
+    const [isInitialized, setIsInitialized] = useState(false);
+    const [initializationError, setInitializationError] = useState<string | null>(null);
 
     // Core state
     const [sourceImage1, setSourceImage1] = useState<string | null>(null);
@@ -66,8 +64,17 @@ const App: React.FC = () => {
         return 'generate';
     }, [sourceImage1, sourceImage2]);
 
-    // FIX: Removed useEffect and related functions for handling API key modal.
-    // The Gemini client is now initialized automatically in geminiService.ts.
+    useEffect(() => {
+        try {
+            // Attempt to initialize the client. The service now handles getting the key from process.env.
+            initAiClient();
+            setIsInitialized(true);
+        } catch (error) {
+            const errorMessage = (error instanceof Error) ? error.message : '알 수 없는 오류가 발생했습니다.';
+            setInitializationError(errorMessage);
+            console.error(error);
+        }
+    }, []);
 
     const handleImageUpload = (file: File, sourceNumber: 1 | 2) => {
         const reader = new FileReader();
@@ -392,8 +399,25 @@ ${styleEnhancement}`;
 
     const isMagicToolsDisabled = isLoading || !(sourceImage1 || (activeResult && activeResult.type === 'image'));
 
-    // FIX: Removed API Key modal rendering.
-    // The app now renders directly, assuming the API key is available.
+    if (!isInitialized) {
+        return (
+            <div className="flex items-center justify-center h-screen bg-[var(--bg-main)] text-[var(--text-primary)]">
+                <div className="text-center p-8 rounded-2xl bg-[var(--panel-bg-solid)] max-w-md mx-4 shadow-2xl animate-[fadeInScale_0.3s_ease-out]">
+                    {initializationError ? (
+                        <>
+                            <h1 className="text-2xl font-bold text-[var(--error-color)] mb-4">초기화 오류</h1>
+                            <p className="text-[var(--text-secondary)]">{initializationError}</p>
+                        </>
+                    ) : (
+                         <>
+                            <h1 className="text-2xl font-bold neon-text-subtle mb-4">초기화 중...</h1>
+                            <p className="text-[var(--text-secondary)]">AI 미러 유니버스를 준비하고 있습니다.</p>
+                        </>
+                    )}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-screen bg-[var(--bg-main)] text-[var(--text-primary)] overflow-hidden">
