@@ -1,20 +1,10 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 
-let ai: GoogleGenAI | null = null;
-
-export const initializeGoogleGenAI = (apiKey: string) => {
-    if (!apiKey) {
-        console.error("API Key is missing for initialization");
-        ai = null;
-        return;
-    }
-    ai = new GoogleGenAI({ apiKey });
-};
+// The API key is expected to be available as an environment variable (`process.env.API_KEY`).
+// As per the project's requirements, we assume it is pre-configured and valid.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
 const getAiClient = (): GoogleGenAI => {
-    if (!ai) {
-        throw new Error("AI 클라이언트가 초기화되지 않았습니다. API 키를 설정해주세요.");
-    }
     return ai;
 }
 
@@ -215,9 +205,8 @@ export const generateVideoWithVeo = async (
         }
 
         onProgress("생성된 비디오를 다운로드 중입니다...");
-        // NOTE: The fetch call for the video doesn't need the API key in the URL
-        // when called from the browser, as the SDK handles authentication.
-        const response = await fetch(downloadLink);
+        // The response.body contains the MP4 bytes. You must append an API key when fetching from the download link.
+        const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
         if (!response.ok) {
             throw new Error(`비디오 다운로드 실패: ${response.statusText}`);
         }

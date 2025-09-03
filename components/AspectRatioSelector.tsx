@@ -19,26 +19,21 @@ export const AspectRatioSelector: React.FC<AspectRatioSelectorProps> = ({
 }) => {
     return (
         <div className={`transition-opacity duration-300 ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}>
-            <div className={`grid grid-cols-3 gap-3 flex-grow ${disabled ? 'pointer-events-none' : ''}`}>
+            <div className={`grid grid-cols-3 gap-2 flex-grow ${disabled ? 'pointer-events-none' : ''}`}>
                 {aspectRatios.map((ratio) => (
                     <NeumorphicButton
                         key={ratio.id}
                         onClick={() => onSelectAspectRatio(ratio.id)}
                         isSelected={selectedAspectRatio === ratio.id}
-                        className="flex-col !p-2 space-y-1 text-xs h-20"
+                        className="flex-col !p-1 space-y-1 justify-center h-16"
                         title={ratio.name}
                         disabled={disabled}
                     >
-                        <span className="text-3xl font-mono">{ratio.icon}</span>
-                        <span className="font-semibold">{ratio.name}</span>
+                        <span className="text-2xl">{ratio.icon}</span>
+                        <span className="text-xs font-semibold">{ratio.name}</span>
                     </NeumorphicButton>
                 ))}
             </div>
-            {disabled && (
-                 <p className="text-xs text-center text-[var(--text-secondary)] mt-3">
-                    사진 비율은 프롬프트만으로 이미지를 생성할 때만 사용할 수 있습니다.
-                </p>
-            )}
         </div>
     );
 };

@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect } from 'react';
 import type { GeneratedMedia, AppMessage } from '../types';
 import { NeumorphicButton } from './NeumorphicButton';
@@ -71,7 +73,7 @@ export const ResultViewer: React.FC<ResultViewerProps> = ({ media, isLoading, me
     const promoteButtonText = appMode === 'generate' ? '✨ 이 이미지로 편집 고정' : '✨ 매직 툴로 편집';
 
     return (
-        <div className="flex-grow flex items-center justify-center custom-inset p-2 rounded-2xl relative min-h-[300px]">
+        <div className="flex-grow flex items-center justify-center custom-inset p-2 rounded-2xl relative min-h-[250px]">
             {isLoading && (
                  <div className="text-center">
                     <Loader />

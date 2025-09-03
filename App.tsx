@@ -11,10 +11,9 @@ import { GalleryModal } from './components/GalleryModal';
 import { MixerControls } from './components/MixerControls';
 import { NeumorphicPanel } from './components/NeumorphicPanel';
 import { NeumorphicButton } from './components/NeumorphicButton';
-import { ApiKeyModal } from './components/ApiKeyModal';
 import { STYLES, ENHANCEMENT_PROMPTS, INSPIRATION_PROMPTS, ASPECT_RATIOS, VIDEO_LOADING_MESSAGES } from './constants';
 import type { Style, GeneratedMedia, AspectRatio, AppMessage } from './types';
-import { editImageWithGemini, generateImageWithImagen, recomposeImagesWithGemini, generateVideoWithVeo, initializeGoogleGenAI } from './services/geminiService';
+import { editImageWithGemini, generateImageWithImagen, recomposeImagesWithGemini, generateVideoWithVeo } from './services/geminiService';
 import { dataUrlToFile, getMimeType } from './utils/imageUtils';
 
 declare const JSZip: any;
@@ -26,10 +25,6 @@ interface MixerValues {
 }
 
 const App: React.FC = () => {
-    // API Key State
-    const [apiKey, setApiKey] = useState<string | null>(null);
-    const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
-
     // Core state
     const [sourceImage1, setSourceImage1] = useState<string | null>(null);
     const [sourceFile1, setSourceFile1] = useState<File | null>(null);
@@ -59,25 +54,6 @@ const App: React.FC = () => {
     const [selectedMediaIds, setSelectedMediaIds] = useState<Set<number>>(new Set());
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [modalImageIndex, setModalImageIndex] = useState<number | null>(null);
-
-    useEffect(() => {
-        const storedApiKey = localStorage.getItem('gemini_api_key');
-        if (storedApiKey) {
-            setApiKey(storedApiKey);
-            initializeGoogleGenAI(storedApiKey);
-        } else {
-            setIsApiKeyModalOpen(true);
-        }
-    }, []);
-
-    const handleApiKeySubmit = (key: string) => {
-        if (key) {
-            setApiKey(key);
-            localStorage.setItem('gemini_api_key', key);
-            initializeGoogleGenAI(key);
-            setIsApiKeyModalOpen(false);
-        }
-    };
     
     const appMode = useMemo(() => {
         if (sourceImage1 && sourceImage2) return 'recompose';
@@ -121,10 +97,6 @@ const App: React.FC = () => {
     };
 
     const handleCreate = useCallback(async (modificationPrompt: string = '', ageModification: number | null = null) => {
-        if (!apiKey) {
-            setIsApiKeyModalOpen(true);
-            return;
-        }
         setIsLoading(true);
         setMessage(null);
         setLoadingMessage('');
@@ -281,7 +253,7 @@ ${styleEnhancement}`;
         } finally {
             setIsLoading(false);
         }
-    }, [studioMode, sourceImage1, sourceFile1, sourceImage2, sourceFile2, prompt, selectedStyle, activeResult, selectedAspectRatio, mixerValues, appMode, apiKey]);
+    }, [studioMode, sourceImage1, sourceFile1, sourceImage2, sourceFile2, prompt, selectedStyle, activeResult, selectedAspectRatio, mixerValues, appMode]);
     
     const handlePromoteResultToSource = useCallback(async () => {
         if (!activeResult || activeResult.type !== 'image') return;
@@ -297,8 +269,22 @@ ${styleEnhancement}`;
         }
     }, [activeResult]);
 
-    const handleStyleSelect = (styleId: Style['id']) => setSelectedStyle(prev => (prev === styleId ? null : prev));
-    const handleAspectRatioSelect = (aspectRatioId: AspectRatio['id']) => setSelectedAspectRatio(aspectRatioId);
+    const handleStyleSelect = (styleId: Style['id']) => {
+        setSelectedStyle(prev => (prev === styleId ? null : styleId));
+    };
+    
+    const handleAspectRatioSelect = (aspectRatioId: AspectRatio['id']) => {
+        setSelectedAspectRatio(aspectRatioId);
+        // If we are in edit or recompose mode, changing aspect ratio resets to generate mode.
+        if (appMode !== 'generate') {
+            setSourceImage1(null);
+            setSourceFile1(null);
+            setSourceImage2(null);
+            setSourceFile2(null);
+            setActiveResult(null); // Also clear the active result to avoid confusion
+            setMessage({ text: '사진 비율을 변경하여 이미지 생성 모드로 전환되었습니다.', type: 'info' });
+        }
+    };
     
     const handleDownloadActiveMedia = useCallback(() => {
         if (!activeResult) return;
@@ -398,38 +384,30 @@ ${styleEnhancement}`;
 
     const isMagicToolsDisabled = isLoading || !(sourceImage1 || (activeResult && activeResult.type === 'image'));
 
-    if (!apiKey && !isApiKeyModalOpen) {
-        return null; // Render nothing until we know if we need to show the modal
-    }
-    
     return (
-        <div className="flex flex-col min-h-screen bg-[var(--bg-main)] text-[var(--text-primary)]">
-            {isApiKeyModalOpen && <ApiKeyModal onSubmit={handleApiKeySubmit} />}
-
-            <div className={`container mx-auto p-4 md:p-8 flex-grow flex flex-col ${isApiKeyModalOpen ? 'blur-sm' : ''}`}>
-                <header className="text-center mb-8 animate-[fadeIn_0.5s_ease-out_forwards] opacity-0">
-                    <h1 className="text-5xl md:text-6xl neon-title">AI Mirror Universe</h1>
-                    <p className="text-lg md:text-xl mt-4 text-[var(--text-secondary)] font-medium tracking-wide">
+        <div className="flex flex-col h-screen bg-[var(--bg-main)] text-[var(--text-primary)] overflow-hidden">
+            <div className="container mx-auto p-3 flex-grow flex flex-col min-h-0">
+                <header className="text-center mb-2 flex-shrink-0 animate-[fadeIn_0.5s_ease-out_forwards] opacity-0">
+                    <h1 className="text-4xl md:text-5xl neon-title">AI Mirror Universe</h1>
+                    <p className="text-sm md:text-base mt-1 text-[var(--text-secondary)] font-medium tracking-wide">
                        “AI를 통해 거울 속에서 새로운 나를 발견하는 무한한 세계”
                     </p>
-                     <div className="mt-8 max-w-2xl mx-auto">
-                        <NeumorphicPanel className="!p-4 neon-glow-panel">
-                            <p className="text-lg md:text-xl text-center text-[var(--text-secondary)] font-medium tracking-wide">
+                </header>
+                
+                <main className="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-grow min-h-0">
+                    <aside className="lg:col-span-3 flex flex-col gap-3 animate-[fadeIn_0.5s_ease-out_forwards] opacity-0" style={{ animationDelay: '200ms' }}>
+                        <NeumorphicPanel className="!p-2 neon-glow-panel">
+                            <p className="text-sm text-center text-[var(--text-secondary)] font-medium tracking-wide">
                                 <span className="font-bold neon-text-subtle">Persona Nexus:</span> “다양한 자아(Persona)가 연결되는 네트워크”
                             </p>
                         </NeumorphicPanel>
-                    </div>
-                </header>
-
-                <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
-                    <aside className="lg:col-span-3 flex flex-col gap-6 animate-[fadeIn_0.5s_ease-out_forwards] opacity-0" style={{ animationDelay: '200ms' }}>
                         <NeumorphicPanel className="flex-1 flex flex-col">
-                            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">{isVideoMode ? '애니메이션 소스' : '1. 메인 소스'}</h2>
+                            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-3">{isVideoMode ? '애니메이션 소스' : '메인 소스'}</h2>
                             <ImageUploader onImageUpload={(file) => handleImageUpload(file, 1)} onClear={() => handleImageClear(1)} sourceImage={sourceImage1} />
                         </NeumorphicPanel>
                          { !isVideoMode &&
                             <NeumorphicPanel className="flex-1 flex flex-col">
-                                <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">2. 추가 소스 (스타일 & 배경)</h2>
+                                <h2 className="text-xl font-bold text-[var(--text-primary)] mb-3">추가 소스 (스타일 & 배경)</h2>
                                 <ImageUploader
                                     onImageUpload={(file) => handleImageUpload(file, 2)}
                                     onClear={() => handleImageClear(2)}
@@ -440,67 +418,50 @@ ${styleEnhancement}`;
                         }
                     </aside>
 
-                    <fieldset disabled={isLoading} className="lg:col-span-6 flex flex-col animate-[fadeIn_0.5s_ease-out_forwards] opacity-0 transition-opacity duration-300 disabled:opacity-50 disabled:cursor-wait" style={{ animationDelay: '400ms' }}>
-                        <section className="space-y-6 flex flex-col flex-grow">
-                            <NeumorphicPanel>
-                                <div className="flex bg-[var(--panel-bg-solid)] p-1 rounded-full border border-[var(--border-color)]">
-                                    <button onClick={() => setStudioMode('image')} className={`flex-1 py-2 text-center rounded-full transition-colors ${!isVideoMode ? 'bg-[var(--accent-color)] text-white font-bold' : 'text-[var(--text-secondary)] hover:text-white'}`}>🌌 Image Galaxy</button>
-                                    <button onClick={() => setStudioMode('video')} className={`flex-1 py-2 text-center rounded-full transition-colors ${isVideoMode ? 'bg-[var(--accent-color)] text-white font-bold' : 'text-[var(--text-secondary)] hover:text-white'}`}>🪐 Video Universe</button>
-                                </div>
-                                <div className="text-center mt-4 animate-[fadeIn_0.3s]">
-                                    {isVideoMode ? (
-                                        <p className="text-md text-[var(--text-secondary)]">“모든 영상이 모여 하나의 우주를 이루는 확장 공간”</p>
-                                    ) : (
-                                        <p className="text-md text-[var(--text-secondary)]">“이미지가 은하처럼 무수히 생성되고 흩어지는 창작의 장”</p>
-                                    )}
-                                </div>
-                            </NeumorphicPanel>
-                            
-                            <NeumorphicPanel>
-                                 <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-xl font-bold text-[var(--text-primary)]">1. 프롬프트 입력</h2>
-                                    <NeumorphicButton onClick={handleGetInspiration} title="새로운 영감 받기" className="!p-2 !rounded-full text-xl !bg-transparent" disabled={isVideoMode}>💡</NeumorphicButton>
-                                </div>
-                                <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full h-24 p-4 text-base rounded-xl custom-inset focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]" placeholder={promptPlaceholder}/>
-                            </NeumorphicPanel>
-                            
-                            {appMode === 'recompose' && !isVideoMode && (
-                                <MixerControls values={mixerValues} onChange={setMixerValues} />
-                            )}
-                            
-                            <div className={`transition-opacity duration-300 ${isVideoMode ? 'opacity-40 pointer-events-none' : ''}`}>
-                                <NeumorphicPanel className="flex-grow flex flex-col">
-                                    <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">2. 스타일 선택</h2>
-                                    <StyleSelector styles={STYLES} selectedStyle={selectedStyle} onSelectStyle={handleStyleSelect} />
-                                </NeumorphicPanel>
+                    <fieldset disabled={isLoading} className="lg:col-span-5 flex flex-col gap-3 min-h-0 animate-[fadeIn_0.5s_ease-out_forwards] opacity-0 transition-opacity duration-300 disabled:opacity-50 disabled:cursor-wait" style={{ animationDelay: '400ms' }}>
+                        <NeumorphicPanel>
+                            <div className="flex bg-[var(--panel-bg-solid)] p-1 rounded-full border border-[var(--border-color)]">
+                                <button onClick={() => setStudioMode('image')} className={`flex-1 py-2 text-center rounded-full transition-colors ${!isVideoMode ? 'bg-[var(--accent-color)] text-white font-bold' : 'text-[var(--text-secondary)] hover:text-white'}`}>🌌 Image Galaxy</button>
+                                <button onClick={() => setStudioMode('video')} className={`flex-1 py-2 text-center rounded-full transition-colors ${isVideoMode ? 'bg-[var(--accent-color)] text-white font-bold' : 'text-[var(--text-secondary)] hover:text-white'}`}>🪐 Video Universe</button>
                             </div>
-
-                            <div className={`transition-opacity duration-300 ${isVideoMode ? 'opacity-40 pointer-events-none' : ''}`}>
-                                <NeumorphicPanel>
-                                    <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">3. 사진 비율 선택</h2>
-                                    <AspectRatioSelector aspectRatios={ASPECT_RATIOS} selectedAspectRatio={selectedAspectRatio} onSelectAspectRatio={handleAspectRatioSelect} disabled={appMode !== 'generate'}/>
-                                </NeumorphicPanel>
+                            <div className="text-center mt-3 animate-[fadeIn_0.3s]">
+                                {isVideoMode ? (
+                                    <p className="text-md text-[var(--text-secondary)]">“모든 영상이 모여 하나의 우주를 이루는 확장 공간”</p>
+                                ) : (
+                                    <p className="text-md text-[var(--text-secondary)]">“이미지가 은하처럼 무수히 생성되고 흩어지는 창작의 장”</p>
+                                )}
                             </div>
-
-                            <div className={`transition-opacity duration-300 ${isVideoMode ? 'opacity-40 pointer-events-none' : ''}`}>
-                                <NeumorphicPanel className={`neon-glow-panel ${isMagicToolsDisabled ? 'opacity-40' : ''}`}>
-                                    <h2 className="text-xl font-bold text-[var(--text-primary)] text-center mb-2">4. ✨ AI Magic Tools</h2>
-                                    <p className="text-xs text-center text-[var(--text-secondary)] mb-6">결과물에 적용하여 연속적으로 수정할 수 있습니다.</p>
-                                    <PostProcessingControls onModify={handleCreate} disabled={isMagicToolsDisabled} />
-                                </NeumorphicPanel>
+                        </NeumorphicPanel>
+                        
+                        <NeumorphicPanel>
+                             <div className="flex justify-between items-center mb-3">
+                                <h2 className="text-xl font-bold text-[var(--text-primary)]">프롬프트 입력</h2>
+                                <NeumorphicButton onClick={handleGetInspiration} title="새로운 영감 받기" className="!p-2 !rounded-full text-xl !bg-transparent" disabled={isVideoMode}>💡</NeumorphicButton>
+                            </div>
+                            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full h-16 p-3 text-base rounded-xl custom-inset focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]" placeholder={promptPlaceholder}/>
+                        </NeumorphicPanel>
+                        
+                        {appMode === 'recompose' && !isVideoMode && (
+                            <MixerControls values={mixerValues} onChange={setMixerValues} />
+                        )}
+                        
+                        <NeumorphicPanel className={`flex-grow flex gap-3 min-h-0 transition-opacity duration-300 ${isVideoMode ? 'opacity-40 pointer-events-none' : ''}`}>
+                            <div className="flex-1 flex flex-col">
+                                <h2 className="text-xl font-bold text-[var(--text-primary)] mb-3">스타일 선택</h2>
+                                <StyleSelector styles={STYLES} selectedStyle={selectedStyle} onSelectStyle={handleStyleSelect} />
                             </div>
                             
-                             <div className="pt-2 mt-auto">
-                                 <button onClick={() => handleCreate()} disabled={isCreationDisabled} className="main-generate-button w-full rounded-full py-4 px-10 text-xl font-bold text-white bg-[var(--accent-color)] transition-all duration-300 ease-in-out shadow-lg hover:-translate-y-1 disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-[var(--text-tertiary)] disabled:shadow-none">
-                                    {isLoading ? (isVideoMode ? '애니메이션 제작 중...' : '생성 중...') : (isVideoMode ? '페르소나 생성하기' : (appMode === 'recompose' ? '결합하기' : '발견하기'))}
-                                </button>
+                            <div className='flex-1 flex flex-col'>
+                                <h2 className="text-xl font-bold text-[var(--text-primary)] text-center mb-2">✨ AI Magic Tools</h2>
+                                <p className="text-xs text-center text-[var(--text-secondary)] mb-4">결과물에 적용하여 연속적으로 수정할 수 있습니다.</p>
+                                <PostProcessingControls onModify={handleCreate} disabled={isMagicToolsDisabled} />
                             </div>
-                        </section>
+                        </NeumorphicPanel>
                     </fieldset>
 
-                    <aside className="lg:col-span-3 flex flex-col animate-[fadeIn_0.5s_ease-out_forwards] opacity-0" style={{ animationDelay: '600ms' }}>
-                         <NeumorphicPanel className="h-full flex flex-col">
-                            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">결과물</h2>
+                    <aside className="lg:col-span-4 flex flex-col animate-[fadeIn_0.5s_ease-out_forwards] opacity-0" style={{ animationDelay: '600ms' }}>
+                         <NeumorphicPanel className="flex flex-col flex-1 min-h-0">
+                            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-3">결과물</h2>
                             <ResultViewer 
                                 media={activeResult} 
                                 isLoading={isLoading} 
@@ -510,41 +471,54 @@ ${styleEnhancement}`;
                                 onPromote={handlePromoteResultToSource}
                                 appMode={appMode}
                             />
+
+                            <div className={`mt-3 transition-opacity duration-300 ${isVideoMode ? 'opacity-40 pointer-events-none' : ''}`}>
+                                <NeumorphicPanel>
+                                    <h2 className="text-xl font-bold text-[var(--text-primary)] mb-3">사진 비율 선택</h2>
+                                    <AspectRatioSelector aspectRatios={ASPECT_RATIOS} selectedAspectRatio={selectedAspectRatio} onSelectAspectRatio={handleAspectRatioSelect} disabled={false}/>
+                                </NeumorphicPanel>
+                            </div>
+
+                            <div className="pt-3 mt-auto">
+                                <button onClick={() => handleCreate()} disabled={isCreationDisabled} className="main-generate-button w-full rounded-full py-3 px-10 text-xl font-bold text-white bg-[var(--accent-color)] transition-all duration-300 ease-in-out shadow-lg hover:-translate-y-1 disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-[var(--text-tertiary)] disabled:shadow-none">
+                                    {isLoading ? (isVideoMode ? '애니메이션 제작 중...' : '생성 중...') : (isVideoMode ? '페르소나 생성하기' : (appMode === 'recompose' ? '결합하기' : '발견하기'))}
+                                </button>
+                            </div>
+
+                            {generatedMedia.length > 0 && (
+                                <div className="flex flex-col flex-grow min-h-0 mt-4 border-t border-[var(--border-color)] pt-3 animate-[fadeIn_1s_ease-out]">
+                                    <div className="flex flex-wrap justify-between items-center mb-3 gap-2 flex-shrink-0">
+                                        <h2 className="text-lg font-bold text-[var(--text-primary)]">라이브러리</h2>
+                                        <div className="flex items-center space-x-2">
+                                            {isSelectionMode ? (
+                                                <>
+                                                    <span className="text-sm font-semibold text-[var(--text-secondary)] mr-2">{selectedMediaIds.size}개 선택됨</span>
+                                                    <NeumorphicButton onClick={downloadSelectedMedia} className="!px-3 !py-2 text-sm" disabled={selectedMediaIds.size === 0}>선택 다운로드</NeumorphicButton>
+                                                    <NeumorphicButton onClick={toggleSelectionMode} className="!px-3 !py-2 text-sm">취소</NeumorphicButton>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <NeumorphicButton onClick={downloadAllMedia} className="!px-3 !py-2 text-sm">전체 다운로드</NeumorphicButton>
+                                                    <NeumorphicButton onClick={toggleSelectionMode} className="!px-3 !py-2 text-sm">선택</NeumorphicButton>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="overflow-y-auto flex-grow pr-1 custom-scrollbar">
+                                        <ImageGallery images={generatedMedia} onImageClick={isSelectionMode ? toggleMediaSelection : openModal} isSelectionMode={isSelectionMode} selectedImageIds={selectedMediaIds}/>
+                                    </div>
+                                </div>
+                            )}
                         </NeumorphicPanel>
                     </aside>
                 </main>
-                
-                {generatedMedia.length > 0 && (
-                    <section className="mt-12 animate-[fadeIn_1s_ease-out]">
-                        <NeumorphicPanel>
-                             <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                                <h2 className="text-xl font-bold text-[var(--text-primary)]">라이브러리 앨범</h2>
-                                <div className="flex items-center space-x-2">
-                                    {isSelectionMode ? (
-                                        <>
-                                            <span className="text-sm font-semibold text-[var(--text-secondary)] mr-2">{selectedMediaIds.size}개 선택됨</span>
-                                            <NeumorphicButton onClick={downloadSelectedMedia} className="!px-3 !py-2 text-sm" disabled={selectedMediaIds.size === 0}>선택 다운로드</NeumorphicButton>
-                                            <NeumorphicButton onClick={toggleSelectionMode} className="!px-3 !py-2 text-sm">취소</NeumorphicButton>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <NeumorphicButton onClick={downloadAllMedia} className="!px-3 !py-2 text-sm">전체 다운로드</NeumorphicButton>
-                                            <NeumorphicButton onClick={toggleSelectionMode} className="!px-3 !py-2 text-sm">선택</NeumorphicButton>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                            <ImageGallery images={generatedMedia} onImageClick={isSelectionMode ? toggleMediaSelection : openModal} isSelectionMode={isSelectionMode} selectedImageIds={selectedMediaIds}/>
-                        </NeumorphicPanel>
-                    </section>
-                )}
             </div>
 
             {isModalOpen && modalImageIndex !== null && (
                  <GalleryModal images={generatedMedia} startIndex={modalImageIndex} onClose={closeModal}/>
             )}
             
-            <footer className="text-center py-8 text-[var(--text-tertiary)] text-base mt-8 border-t border-[var(--border-color)]">
+            <footer className="text-center py-2 text-[var(--text-tertiary)] text-xs border-t border-[var(--border-color)] flex-shrink-0">
                 <p className="font-semibold neon-text-subtle">© Created by Demian 임정훈</p>
             </footer>
         </div>

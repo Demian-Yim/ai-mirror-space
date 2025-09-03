@@ -60,13 +60,13 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, onC
             ) : (
                 disabled ? (
                      <div className="text-center text-[var(--text-tertiary)]">
-                        <span className="text-4xl mb-2 block">🔒</span>
-                        <span className="font-semibold text-base leading-tight">메인 소스를 먼저<br/>업로드해주세요.</span>
+                        <span className="text-3xl mb-2 block">🔒</span>
+                        <span className="font-semibold text-sm leading-tight">메인 소스를 먼저<br/>업로드해주세요.</span>
                     </div>
                 ) : (
                     <div className="text-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                        <span className="text-4xl mb-2 block">↑</span>
-                        <span className="font-semibold text-base">Upload Image</span>
+                        <span className="text-3xl mb-2 block">↑</span>
+                        <span className="font-semibold text-sm">Upload Image</span>
                     </div>
                 )
             )}
