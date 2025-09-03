@@ -5,8 +5,10 @@ let ai: GoogleGenAI | null = null;
 let currentApiKey: string | null = null;
 
 export const initAiClient = () => {
+    // Fix: Use process.env.API_KEY as per the guidelines to resolve the 'ImportMeta' error.
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
+        // Fix: Updated the error message to refer to API_KEY.
         throw new Error("API_KEY 환경 변수가 설정되지 않았습니다. README.md 파일의 배포 안내를 따라 Vercel 또는 다른 호스팅 서비스에 API 키를 설정해주세요.");
     }
     ai = new GoogleGenAI({ apiKey });
