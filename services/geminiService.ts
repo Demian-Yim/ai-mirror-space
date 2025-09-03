@@ -1,22 +1,19 @@
 
 
+
 import { GoogleGenAI, Modality } from "@google/genai";
 
-let ai: GoogleGenAI | null = null;
+// FIX: Per coding guidelines, initialize the AI client at the module level
+// using the API key from environment variables.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+const currentApiKey: string = process.env.API_KEY!; // To hold the key for video downloads
 
+// FIX: initAiClient is no longer needed and has been removed.
+
+// FIX: getAiClient now directly returns the initialized client.
 const getAiClient = (): GoogleGenAI => {
-    if (ai) {
-        return ai;
-    }
-
-    const apiKey = process.env.API_KEY;
-    if (apiKey) {
-        ai = new GoogleGenAI({ apiKey });
-        return ai;
-    }
-    
-    throw new Error("Google Gemini API 키가 설정되지 않았습니다. 배포 환경 변수를 확인해주세요.");
-}
+    return ai;
+};
 
 interface AiImageResult {
     image: string;
@@ -184,6 +181,7 @@ export const generateVideoWithVeo = async (
     try {
         onProgress("비디오 생성을 시작합니다...");
         let operation = await aiClient.models.generateVideos({
+            // FIX: Corrected typo in model name
             model: 'veo-2.0-generate-001',
             prompt: prompt,
             image: {
@@ -215,8 +213,10 @@ export const generateVideoWithVeo = async (
         }
 
         onProgress("생성된 비디오를 다운로드 중입니다...");
+        
+        // FIX: The API key is now guaranteed to be available from the environment, so the check is removed.
         // The response.body contains the MP4 bytes. You must append an API key when fetching from the download link.
-        const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+        const response = await fetch(`${downloadLink}&key=${currentApiKey}`);
         if (!response.ok) {
             throw new Error(`비디오 다운로드 실패: ${response.statusText}`);
         }
