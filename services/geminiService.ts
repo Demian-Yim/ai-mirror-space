@@ -1,17 +1,22 @@
 
+import { GoogleGenAI, Modality, type GenerateContentResponse } from "@google/genai";
 
+let ai: GoogleGenAI | null = null;
+let currentApiKey: string | null = null;
 
-import { GoogleGenAI, Modality } from "@google/genai";
+export const initAiClient = () => {
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+        throw new Error("API_KEY 환경 변수가 설정되지 않았습니다. README.md 파일의 배포 안내를 따라 Vercel 또는 다른 호스팅 서비스에 API 키를 설정해주세요.");
+    }
+    ai = new GoogleGenAI({ apiKey });
+    currentApiKey = apiKey;
+};
 
-// FIX: Per coding guidelines, initialize the AI client at the module level
-// using the API key from environment variables.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
-const currentApiKey: string = process.env.API_KEY!; // To hold the key for video downloads
-
-// FIX: initAiClient is no longer needed and has been removed.
-
-// FIX: getAiClient now directly returns the initialized client.
 const getAiClient = (): GoogleGenAI => {
+    if (!ai) {
+        throw new Error("AI client가 초기화되지 않았습니다. App.tsx에서 initAiClient가 먼저 호출되었는지 확인해주세요.");
+    }
     return ai;
 };
 
@@ -38,7 +43,7 @@ const SYSTEM_INSTRUCTION_FOR_RECOMPOSITION = `You are an expert at image recompo
 - Your goal is to seamlessly transfer the subject from the first image into the style and environment of the second image.
 - The user's text prompt provides additional creative direction for this combination.`;
 
-const processApiResponse = (response: any): AiImageResult => {
+const processApiResponse = (response: GenerateContentResponse): AiImageResult => {
     let result: Partial<AiImageResult> & { text: string | null } = { image: undefined, text: null, mimeType: undefined };
 
     if (response && response.candidates && response.candidates.length > 0) {
@@ -144,24 +149,17 @@ export const generateImageWithImagen = async (
             model: 'imagen-4.0-generate-001',
             prompt: prompt,
             config: {
-              numberOfImages: 1,
-              outputMimeType: 'image/png',
-              aspectRatio: aspectRatio as "1:1" | "16:9" | "9:16" | "4:3" | "3:4",
+                numberOfImages: 1,
+                outputMimeType: 'image/png',
+                aspectRatio: aspectRatio as "1:1" | "16:9" | "9:16" | "4:3" | "3:4",
             },
         });
 
-        const generatedImage = response.generatedImages[0];
-        if (!generatedImage || !generatedImage.image.imageBytes) {
-            throw new Error("API가 이미지를 반환하지 않았습니다.");
-        }
-
-        const base64ImageBytes: string = generatedImage.image.imageBytes;
-        const mimeType = 'image/png';
-
+        const base64ImageBytes = response.generatedImages[0].image.imageBytes;
         return {
-            image: `data:${mimeType};base64,${base64ImageBytes}`,
+            image: `data:image/png;base64,${base64ImageBytes}`,
             text: null,
-            mimeType: mimeType,
+            mimeType: 'image/png'
         };
 
     } catch (error) {
@@ -169,7 +167,6 @@ export const generateImageWithImagen = async (
         throw new Error("Imagen API로 이미지 생성에 실패했습니다.");
     }
 };
-
 
 export const generateVideoWithVeo = async (
     base64ImageData: string,
@@ -179,9 +176,8 @@ export const generateVideoWithVeo = async (
 ): Promise<AiVideoResult> => {
     const aiClient = getAiClient();
     try {
-        onProgress("비디오 생성을 시작합니다...");
+        onProgress("비디오 생성 요청을 시작합니다...");
         let operation = await aiClient.models.generateVideos({
-            // FIX: Corrected typo in model name
             model: 'veo-2.0-generate-001',
             prompt: prompt,
             image: {
@@ -189,48 +185,40 @@ export const generateVideoWithVeo = async (
                 mimeType: mimeType,
             },
             config: {
-                numberOfVideos: 1
+                numberOfVideos: 1,
             }
         });
 
-        let pollCount = 0;
-        const maxPolls = 30; // 5 minutes timeout
-
-        while (!operation.done && pollCount < maxPolls) {
-            onProgress(`처리 중... (시도 ${pollCount + 1}/${maxPolls})`);
+        onProgress("서버에서 비디오를 처리 중입니다...");
+        while (!operation.done) {
             await new Promise(resolve => setTimeout(resolve, 10000)); // Poll every 10 seconds
             operation = await aiClient.operations.getVideosOperation({ operation: operation });
-            pollCount++;
         }
 
-        if (!operation.done) {
-            throw new Error("비디오 생성 시간이 초과되었습니다. 다시 시도해 주세요.");
-        }
-
+        onProgress("비디오 다운로드 링크를 가져오는 중입니다...");
         const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+
         if (!downloadLink) {
-            throw new Error("API가 비디오를 반환하지 않았습니다. 프롬프트가 거부되었을 수 있습니다.");
+            throw new Error("생성된 비디오의 다운로드 링크를 찾을 수 없습니다.");
+        }
+        
+        onProgress("비디오 파일을 다운로드하고 있습니다...");
+        // Use the stored API key for the download URL
+        const videoResponse = await fetch(`${downloadLink}&key=${currentApiKey}`);
+        if (!videoResponse.ok) {
+            throw new Error(`비디오 다운로드에 실패했습니다: ${videoResponse.statusText}`);
         }
 
-        onProgress("생성된 비디오를 다운로드 중입니다...");
-        
-        // FIX: The API key is now guaranteed to be available from the environment, so the check is removed.
-        // The response.body contains the MP4 bytes. You must append an API key when fetching from the download link.
-        const response = await fetch(`${downloadLink}&key=${currentApiKey}`);
-        if (!response.ok) {
-            throw new Error(`비디오 다운로드 실패: ${response.statusText}`);
-        }
-        const videoBlob = await response.blob();
+        const videoBlob = await videoResponse.blob();
         const videoUrl = URL.createObjectURL(videoBlob);
-        
+
         return {
             videoUrl: videoUrl,
-            mimeType: videoBlob.type
+            mimeType: videoBlob.type || 'video/mp4',
         };
 
     } catch (error) {
         console.error("Error calling Veo API:", error);
-        const errorMessage = (error instanceof Error) ? error.message : "비디오 생성 중 알 수 없는 오류가 발생했습니다.";
-        throw new Error(`Veo API 오류: ${errorMessage}`);
+        throw new Error("Veo API로 비디오 생성에 실패했습니다.");
     }
 };
