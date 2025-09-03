@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { ImageUploader } from './components/ImageUploader';
 import { StyleSelector } from './components/StyleSelector';
@@ -13,6 +14,7 @@ import { NeumorphicPanel } from './components/NeumorphicPanel';
 import { NeumorphicButton } from './components/NeumorphicButton';
 import { STYLES, ENHANCEMENT_PROMPTS, INSPIRATION_PROMPTS, ASPECT_RATIOS, VIDEO_LOADING_MESSAGES } from './constants';
 import type { Style, GeneratedMedia, AspectRatio, AppMessage } from './types';
+// FIX: Removed initAiClient as it's no longer needed. The client is initialized automatically in the service.
 import { editImageWithGemini, generateImageWithImagen, recomposeImagesWithGemini, generateVideoWithVeo } from './services/geminiService';
 import { dataUrlToFile, getMimeType } from './utils/imageUtils';
 
@@ -25,8 +27,8 @@ interface MixerValues {
 }
 
 const App: React.FC = () => {
-    // API Key State
-    const [apiError, setApiError] = useState<string | null>(null);
+    // FIX: Removed API key state and initialization logic to comply with guidelines.
+    // The application now relies on the API key being set in the environment.
 
     // Core state
     const [sourceImage1, setSourceImage1] = useState<string | null>(null);
@@ -64,12 +66,8 @@ const App: React.FC = () => {
         return 'generate';
     }, [sourceImage1, sourceImage2]);
 
-    useEffect(() => {
-        // Check for the API key from environment variables on mount.
-        if (!process.env.API_KEY) {
-            setApiError("Google Gemini API 키가 설정되지 않았습니다. 앱 관리자에게 문의하거나 README의 배포 가이드를 확인해주세요.");
-        }
-    }, []);
+    // FIX: Removed useEffect and related functions for handling API key modal.
+    // The Gemini client is now initialized automatically in geminiService.ts.
 
     const handleImageUpload = (file: File, sourceNumber: 1 | 2) => {
         const reader = new FileReader();
@@ -394,16 +392,8 @@ ${styleEnhancement}`;
 
     const isMagicToolsDisabled = isLoading || !(sourceImage1 || (activeResult && activeResult.type === 'image'));
 
-    if (apiError) {
-        return (
-            <div className="flex items-center justify-center h-screen bg-[var(--bg-main)] text-[var(--text-primary)]">
-                <NeumorphicPanel className="max-w-md text-center m-4">
-                    <h1 className="text-2xl font-bold text-[var(--error-color)] mb-4">초기화 오류</h1>
-                    <p className="text-base">{apiError}</p>
-                </NeumorphicPanel>
-            </div>
-        );
-    }
+    // FIX: Removed API Key modal rendering.
+    // The app now renders directly, assuming the API key is available.
 
     return (
         <div className="flex flex-col h-screen bg-[var(--bg-main)] text-[var(--text-primary)] overflow-hidden">
