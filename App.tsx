@@ -25,6 +25,9 @@ interface MixerValues {
 }
 
 const App: React.FC = () => {
+    // API Key State
+    const [apiError, setApiError] = useState<string | null>(null);
+
     // Core state
     const [sourceImage1, setSourceImage1] = useState<string | null>(null);
     const [sourceFile1, setSourceFile1] = useState<File | null>(null);
@@ -60,6 +63,13 @@ const App: React.FC = () => {
         if (sourceImage1) return 'edit';
         return 'generate';
     }, [sourceImage1, sourceImage2]);
+
+    useEffect(() => {
+        // Check for the API key from environment variables on mount.
+        if (!process.env.API_KEY) {
+            setApiError("Google Gemini API 키가 설정되지 않았습니다. 앱 관리자에게 문의하거나 README의 배포 가이드를 확인해주세요.");
+        }
+    }, []);
 
     const handleImageUpload = (file: File, sourceNumber: 1 | 2) => {
         const reader = new FileReader();
@@ -383,6 +393,17 @@ ${styleEnhancement}`;
     }[isVideoMode ? 'video' : appMode];
 
     const isMagicToolsDisabled = isLoading || !(sourceImage1 || (activeResult && activeResult.type === 'image'));
+
+    if (apiError) {
+        return (
+            <div className="flex items-center justify-center h-screen bg-[var(--bg-main)] text-[var(--text-primary)]">
+                <NeumorphicPanel className="max-w-md text-center m-4">
+                    <h1 className="text-2xl font-bold text-[var(--error-color)] mb-4">초기화 오류</h1>
+                    <p className="text-base">{apiError}</p>
+                </NeumorphicPanel>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-screen bg-[var(--bg-main)] text-[var(--text-primary)] overflow-hidden">

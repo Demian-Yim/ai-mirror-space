@@ -1,11 +1,21 @@
+
+
 import { GoogleGenAI, Modality } from "@google/genai";
 
-// The API key is expected to be available as an environment variable (`process.env.API_KEY`).
-// As per the project's requirements, we assume it is pre-configured and valid.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+let ai: GoogleGenAI | null = null;
 
 const getAiClient = (): GoogleGenAI => {
-    return ai;
+    if (ai) {
+        return ai;
+    }
+
+    const apiKey = process.env.API_KEY;
+    if (apiKey) {
+        ai = new GoogleGenAI({ apiKey });
+        return ai;
+    }
+    
+    throw new Error("Google Gemini API 키가 설정되지 않았습니다. 배포 환경 변수를 확인해주세요.");
 }
 
 interface AiImageResult {
