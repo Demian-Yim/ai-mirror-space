@@ -32,61 +32,61 @@
     <style>
         :root {
             /* Common Transition */
-            --transition-speed: 0.3s;
+            --transition-speed: 0.4s;
         }
 
-        /* Light Mode (Day) - Soft & Warm */
+        /* Light Mode (Day) - Soft, Creamy, Pastel */
         :root[data-theme="light"] {
-            --bg-main: #F9F7F2; /* Creamy White */
-            --bg-secondary: #F0EBE0;
+            --bg-main: #FDFBF7; /* Warm Cream */
+            --bg-secondary: #F4F1EA;
             
-            --panel-bg: rgba(255, 255, 255, 0.75);
+            --panel-bg: rgba(255, 255, 255, 0.65);
             --panel-bg-solid: #FFFFFF;
             
-            --text-primary: #5D5D5D; /* Soft Charcoal */
-            --text-secondary: #8E8E93;
+            --text-primary: #5A5A5A; /* Soft Charcoal */
+            --text-secondary: #8C8C8C;
             --text-tertiary: #B0B0B0;
             
-            --accent-primary: #9FB1BC; /* Muted Blue */
-            --accent-hover: #7D92A0;
-            --accent-warm: #FFDAC1; /* Soft Peach */
-            --accent-cool: #B5EAD7; /* Mint Green */
+            --accent-primary: #A7C7E7; /* Pastel Blue */
+            --accent-hover: #89B0D6;
+            --accent-warm: #FFB7B2; /* Pastel Coral */
+            --accent-cool: #B5EAD7; /* Pastel Mint */
             --accent-highlight: #E2F0CB; /* Pastel Lime */
             
-            --border-color: rgba(0, 0, 0, 0.08);
-            --inset-bg: #FAFAFA;
+            --border-color: rgba(0, 0, 0, 0.06);
+            --inset-bg: #F9F9F9;
             
-            --shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.05);
-            --shadow-neumorphic: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff;
+            --shadow-soft: 0 10px 30px -10px rgba(167, 199, 231, 0.25);
+            --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
 
-            --error-color: #FFB7B2;
+            --error-color: #FFDAC1;
             --warning-color: #FFE4B5;
             --success-color: #B5EAD7;
         }
 
-        /* Dark Mode (Night) - Dreamy & Deep */
+        /* Dark Mode (Night) - Dreamy, Deep, Stardust */
         :root[data-theme="dark"] {
-            --bg-main: #1A1C23; /* Deep Midnight */
-            --bg-secondary: #252830;
+            --bg-main: #1E1E24; /* Deep Midnight */
+            --bg-secondary: #25252E;
             
-            --panel-bg: rgba(35, 39, 47, 0.7);
-            --panel-bg-solid: #2C3039;
+            --panel-bg: rgba(40, 40, 50, 0.6);
+            --panel-bg-solid: #2D2D35;
             
-            --text-primary: #E0E0E0; /* Soft White */
+            --text-primary: #EAEAEA; /* Soft White */
             --text-secondary: #A0A0A0;
-            --text-tertiary: #6B6B6B;
+            --text-tertiary: #6E6E6E;
             
             --accent-primary: #7F9CA8; /* Dusty Blue */
-            --accent-hover: #A0BACC;
-            --accent-warm: #A05252; /* Muted Rose */
-            --accent-cool: #556B2F; /* Sage Green */
-            --accent-highlight: #708090; /* Slate */
+            --accent-hover: #9FBCC8;
+            --accent-warm: #C78283; /* Muted Rose */
+            --accent-cool: #718F75; /* Sage Green */
+            --accent-highlight: #AAB7B8; /* Slate */
             
-            --border-color: rgba(255, 255, 255, 0.1);
-            --inset-bg: #15171C;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --inset-bg: #18181D;
             
-            --shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.3);
-            --shadow-neumorphic: none;
+            --shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.4);
+            --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 
             --error-color: #CF6679;
             --warning-color: #FFB74D;
@@ -99,8 +99,9 @@
             color: var(--text-primary);
             transition: background-color var(--transition-speed), color var(--transition-speed);
             background-image: 
-                radial-gradient(circle at 10% 20%, rgba(255, 218, 193, 0.05) 0%, transparent 20%),
-                radial-gradient(circle at 90% 80%, rgba(181, 234, 215, 0.05) 0%, transparent 20%);
+                radial-gradient(circle at 5% 5%, rgba(167, 199, 231, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 95% 95%, rgba(255, 183, 178, 0.1) 0%, transparent 40%);
+            background-attachment: fixed;
         }
         
         h1, h2, h3, .serif-font {
@@ -114,24 +115,23 @@
         .custom-inset {
             background-color: var(--inset-bg);
             border: 1px solid var(--border-color);
-            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.02);
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);
             color: var(--text-primary);
             transition: background-color var(--transition-speed), border-color var(--transition-speed);
         }
 
-        .pastel-gradient-text {
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-warm));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
         .glass-panel {
             background: var(--panel-bg);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: var(--shadow-soft);
-            transition: background-color var(--transition-speed), border-color var(--transition-speed);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-glass);
+            transition: background-color var(--transition-speed), border-color var(--transition-speed), box-shadow var(--transition-speed);
+        }
+        
+        /* Interactive Element Transitions */
+        button, a, input, textarea {
+            transition: all 0.2s ease-in-out;
         }
 
         /* Range Slider Customization */
@@ -157,7 +157,7 @@
             transition: transform 0.2s;
         }
         input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.1);
+            transform: scale(1.2);
         }
 
         /* Animations */
@@ -168,6 +168,11 @@
         @keyframes fadeInScale {
              from { opacity: 0; transform: scale(0.95); }
              to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes pulse-soft {
+            0% { box-shadow: 0 0 0 0 rgba(167, 199, 231, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(167, 199, 231, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(167, 199, 231, 0); }
         }
         
         .custom-scrollbar::-webkit-scrollbar {

@@ -30,14 +30,14 @@ interface AiVideoResult {
     mimeType: string;
 }
 
-const SYSTEM_INSTRUCTION_FOR_EDITING = `You are an expert aesthetic photo editor. Your task is to modify the given image based on the user's text prompt.
+const SYSTEM_INSTRUCTION_FOR_EDITING = `You are an expert aesthetic photo editor using Nano Banana Pro model capabilities. Your task is to modify the given image based on the user's text prompt.
 Key instructions:
 - **Preserve Identity**: You MUST preserve the subject's core identity, facial features, and body pose.
 - **Aesthetic Quality**: Ensure the final output has high artistic value, suitable for a refined portfolio.
 - **Maintain Composition**: Keep the original image's composition unless asked otherwise.
 - **Natural Integration**: Apply changes subtly and realistically.`;
 
-const SYSTEM_INSTRUCTION_FOR_RECOMPOSITION = `You are a visionary art director specializing in image synthesis.
+const SYSTEM_INSTRUCTION_FOR_RECOMPOSITION = `You are a visionary art director using Nano Banana Pro capabilities for image synthesis.
 - **Source 1 (Subject)**: Preserve the identity and key features.
 - **Source 2 (Style/Bg)**: Extract the mood, lighting, and artistic style.
 - **Goal**: Create a seamless masterpiece that blends the subject into the new world.`;
@@ -87,8 +87,10 @@ export const editImageWithGemini = async (
                 ],
             },
             config: {
-                // responseModalities not strictly required for this model if implied, but good practice.
                 systemInstruction: SYSTEM_INSTRUCTION_FOR_EDITING,
+                imageConfig: {
+                    aspectRatio: "1:1", // Default aspect ratio preservation
+                }
             },
         });
         return processApiResponse(response);

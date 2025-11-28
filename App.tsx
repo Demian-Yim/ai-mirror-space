@@ -212,7 +212,7 @@ const App: React.FC = () => {
                 const mimeType2 = getMimeType(sourceFile2);
                 
                 const { identityPreservation, styleMix, backgroundMix } = mixerValues;
-                // Enhanced prompts for Nano Banana Pro
+                // Enhanced prompts for Nano Banana Pro (Gemini 3 Pro)
                 const identityPrompt = `Primary Subject: Preserve identity/face from first image (${identityPreservation}% weight).`;
                 const stylePrompt = `Artistic Style: Adopt style from second image (${styleMix}% weight).`;
                 const backgroundPrompt = `Background: Blend background from second image (${backgroundMix}% weight).`;
@@ -278,7 +278,7 @@ const App: React.FC = () => {
                     const styleEnhancement = ENHANCEMENT_PROMPTS[selectedStyle] || '';
                     finalPrompt = `${prompt}, ${styleEnhancement}`;
                 }
-                // Request for Nano Banana Pro (Gemini 3 Pro Image)
+                // Using Nano Banana Pro (gemini-3-pro-image-preview) for text-to-image as well if needed, or specific high-quality model
                 result = await generateImageWithImagen(finalPrompt, selectedAspectRatio);
                 if (result.image) {
                     const newImage: GeneratedMedia = {
@@ -441,8 +441,8 @@ const App: React.FC = () => {
                         </>
                     ) : (
                          <>
-                            <h1 className="text-2xl font-bold pastel-gradient-text mb-4">Initialising Universe...</h1>
-                            <p className="text-[var(--text-secondary)]">Demian의 세계를 불러오고 있습니다.</p>
+                            <h1 className="text-2xl font-bold pastel-gradient-text mb-4 text-[var(--accent-primary)]">AI Mirror Universe</h1>
+                            <p className="text-[var(--text-secondary)]">Demian의 세계를 불러오고 있습니다...</p>
                         </>
                     )}
                 </div>
@@ -453,20 +453,20 @@ const App: React.FC = () => {
     return (
         <div className="flex flex-col h-screen bg-[var(--bg-main)] text-[var(--text-primary)] overflow-hidden font-sans transition-colors duration-300">
             <div className="container mx-auto p-4 flex-grow flex flex-col min-h-0">
-                <header className="flex flex-col md:flex-row justify-between items-center mb-6 flex-shrink-0 animate-[fadeIn_0.5s_ease-out_forwards]">
+                <header className="flex flex-col md:flex-row justify-between items-center mb-4 flex-shrink-0 animate-[fadeIn_0.5s_ease-out_forwards]">
                     <div className="text-center md:text-left mb-4 md:mb-0">
                         <h1 className="text-3xl md:text-4xl font-bold text-[var(--text-primary)] tracking-tight serif-font">
-                            AI Mirror Universe <span className="font-light text-[var(--accent-primary)]">Persona Nexus</span>
+                            AI Mirror Universe
                         </h1>
-                        <h2 className="text-lg md:text-xl font-medium text-[var(--text-secondary)] mt-1 serif-font opacity-80">
-                            AI 미러 유니버스: 페르소나 넥서스
-                        </h2>
-                        <p className="text-sm mt-1 text-[var(--text-tertiary)] italic">
-                           "거울 속의 무한한 나를 마주하다. Demian의 철학이 담긴 자아 탐구의 여정."
+                        <p className="text-base md:text-lg font-medium text-[var(--text-secondary)] mt-1 serif-font opacity-90">
+                            페르소나 넥서스: 거울 속의 무한한 나
+                        </p>
+                        <p className="text-xs mt-1 text-[var(--text-tertiary)] italic">
+                           "Demian 임정훈이 안내하는 자아 탐구의 여정"
                         </p>
                     </div>
-                    <div className="flex gap-3">
-                         <NeumorphicButton onClick={toggleTheme} className="!px-3 !py-2 !rounded-full" title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+                    <div className="flex gap-3 items-center">
+                         <NeumorphicButton onClick={toggleTheme} className="!px-3 !py-2 !rounded-full" title={darkMode ? 'Switch to Day Mode' : 'Switch to Night Mode'}>
                             {darkMode ? '☀️ Day' : '🌙 Night'}
                         </NeumorphicButton>
                         <NeumorphicButton onClick={() => setShowTutorial(true)} className="!px-4 !py-2 !text-sm !font-semibold">
@@ -592,10 +592,10 @@ const App: React.FC = () => {
                 <TutorialModal onClose={closeTutorial} />
             )}
             
-            <footer className="text-center py-6 text-[var(--text-tertiary)] text-xs border-t border-[var(--border-color)] bg-[var(--bg-secondary)] flex-shrink-0 transition-colors">
-                <p className="font-serif text-sm text-[var(--text-secondary)] font-medium">Developed by Demian 임정훈</p>
-                <p className="text-[var(--accent-primary)] font-bold mt-1 tracking-wide">HRD & AI Coach</p>
-                <p className="mt-2 opacity-60">AI Mirror Universe © 2025. Powered by Google Gemini.</p>
+            <footer className="text-center py-8 text-[var(--text-tertiary)] text-xs border-t border-[var(--border-color)] bg-[var(--bg-secondary)] flex-shrink-0 transition-colors">
+                <p className="font-serif text-sm text-[var(--text-primary)] font-bold tracking-wide">Developed by Demian 임정훈</p>
+                <p className="text-[var(--accent-primary)] font-bold mt-1 text-xs uppercase tracking-widest">HRD & AI Coach</p>
+                <p className="mt-3 opacity-60">AI Mirror Universe © 2025. Powered by Google Gemini 3 Pro & Veo 3.1</p>
             </footer>
         </div>
     );
