@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface NeumorphicPanelProps {
@@ -9,9 +10,7 @@ export const NeumorphicPanel: React.FC<NeumorphicPanelProps> = ({ children, clas
     return (
         <div className={`
             p-6 rounded-2xl 
-            bg-[var(--panel-bg)]
-            border border-[var(--border-color)]
-            backdrop-blur-sm
+            glass-panel
             ${className}
         `}>
             {children}

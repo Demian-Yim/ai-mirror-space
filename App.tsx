@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { ImageUploader } from './components/ImageUploader';
 import { StyleSelector } from './components/StyleSelector';
@@ -10,6 +9,8 @@ import { GalleryModal } from './components/GalleryModal';
 import { MixerControls } from './components/MixerControls';
 import { NeumorphicPanel } from './components/NeumorphicPanel';
 import { NeumorphicButton } from './components/NeumorphicButton';
+import { ProcessGuide } from './components/ProcessGuide';
+import { TutorialModal } from './components/TutorialModal';
 import { STYLES, ENHANCEMENT_PROMPTS, INSPIRATION_PROMPTS, ASPECT_RATIOS, VIDEO_LOADING_MESSAGES } from './constants';
 import type { Style, GeneratedMedia, AspectRatio, AppMessage } from './types';
 import { initAiClient, editImageWithGemini, generateImageWithImagen, recomposeImagesWithGemini, generateVideoWithVeo } from './services/geminiService';
@@ -24,9 +25,15 @@ interface MixerValues {
 }
 
 const App: React.FC = () => {
+    // Theme State
+    const [darkMode, setDarkMode] = useState<boolean>(false);
+
     // Initialization State
     const [isInitialized, setIsInitialized] = useState(false);
     const [initializationError, setInitializationError] = useState<string | null>(null);
+
+    // Tutorial State
+    const [showTutorial, setShowTutorial] = useState(false);
 
     // Core state
     const [sourceImage1, setSourceImage1] = useState<string | null>(null);
@@ -65,16 +72,45 @@ const App: React.FC = () => {
     }, [sourceImage1, sourceImage2]);
 
     useEffect(() => {
+        // Theme initialization
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            setDarkMode(true);
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            setDarkMode(false);
+            document.documentElement.setAttribute('data-theme', 'light');
+        }
+
         try {
-            // Attempt to initialize the client. The service now handles getting the key from process.env.
             initAiClient();
             setIsInitialized(true);
+            
+            // Check if tutorial has been seen
+            const hasSeenTutorial = localStorage.getItem('hasSeenTutorial_v2');
+            if (!hasSeenTutorial) {
+                setShowTutorial(true);
+            }
         } catch (error) {
             const errorMessage = (error instanceof Error) ? error.message : '알 수 없는 오류가 발생했습니다.';
             setInitializationError(errorMessage);
             console.error(error);
         }
     }, []);
+
+    const toggleTheme = () => {
+        setDarkMode(prev => {
+            const newMode = !prev;
+            localStorage.setItem('theme', newMode ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', newMode ? 'dark' : 'light');
+            return newMode;
+        });
+    };
+
+    const closeTutorial = () => {
+        setShowTutorial(false);
+        localStorage.setItem('hasSeenTutorial_v2', 'true');
+    };
 
     const handleImageUpload = (file: File, sourceNumber: 1 | 2) => {
         const reader = new FileReader();
@@ -176,18 +212,14 @@ const App: React.FC = () => {
                 const mimeType2 = getMimeType(sourceFile2);
                 
                 const { identityPreservation, styleMix, backgroundMix } = mixerValues;
-                const identityPrompt = `The subject's core identity and facial features from the first image should be preserved with ${identityPreservation}% strength. A lower percentage allows for more fusion with the features from the second image.`;
-                const stylePrompt = `The final artistic style should be a blend, taking ${styleMix}% from the second image's style and ${100-styleMix}% from the first image's style.`;
-                const backgroundPrompt = `The background should be a blend, taking ${backgroundMix}% from the second image's background and ${100-backgroundMix}% from the first image's background.`;
-                const userHint = prompt.trim() ? `An additional user instruction: "${prompt}"` : "Create a seamless and realistic blend.";
-                const styleEnhancement = selectedStyle ? `Additionally, render the final image in a ${ENHANCEMENT_PROMPTS[selectedStyle]} style.` : '';
+                // Enhanced prompts for Nano Banana Pro
+                const identityPrompt = `Primary Subject: Preserve identity/face from first image (${identityPreservation}% weight).`;
+                const stylePrompt = `Artistic Style: Adopt style from second image (${styleMix}% weight).`;
+                const backgroundPrompt = `Background: Blend background from second image (${backgroundMix}% weight).`;
+                const userHint = prompt.trim() ? `User Instruction: "${prompt}"` : "";
+                const styleEnhancement = selectedStyle ? `Style Preset: ${ENHANCEMENT_PROMPTS[selectedStyle]}` : '';
 
-                finalPrompt = `You are an expert image mixer. Combine the two provided images according to these rules:
-1. ${identityPrompt}
-2. ${stylePrompt}
-3. ${backgroundPrompt}
-${userHint}
-${styleEnhancement}`;
+                finalPrompt = `Recompose these images. ${identityPrompt} ${stylePrompt} ${backgroundPrompt} ${userHint} ${styleEnhancement}`;
 
                 result = await recomposeImagesWithGemini(base64Data1, mimeType1, base64Data2, mimeType2, finalPrompt);
                  if (result.image) {
@@ -212,14 +244,13 @@ ${styleEnhancement}`;
                     return;
                 }
                 const base64Data = imageToEditBase64.split(',')[1];
-                
                 const mimeType = activeResult?.mimeType || (sourceFile1 ? getMimeType(sourceFile1) : 'image/png');
                 
                 if(modificationPrompt) {
                     finalPrompt = modificationPrompt;
                 } else if (ageModification !== null) {
                     const direction = ageModification > 0 ? 'older' : 'younger';
-                    finalPrompt = `Make the person look ${Math.abs(ageModification)} years ${direction}, while keeping the original style.`;
+                    finalPrompt = `Make the person look ${Math.abs(ageModification)} years ${direction}. Preserve identity and style.`;
                 } else if (selectedStyle) {
                     const styleEnhancement = ENHANCEMENT_PROMPTS[selectedStyle] || '';
                     finalPrompt = `${prompt}, ${styleEnhancement}`;
@@ -247,6 +278,7 @@ ${styleEnhancement}`;
                     const styleEnhancement = ENHANCEMENT_PROMPTS[selectedStyle] || '';
                     finalPrompt = `${prompt}, ${styleEnhancement}`;
                 }
+                // Request for Nano Banana Pro (Gemini 3 Pro Image)
                 result = await generateImageWithImagen(finalPrompt, selectedAspectRatio);
                 if (result.image) {
                     const newImage: GeneratedMedia = {
@@ -290,14 +322,13 @@ ${styleEnhancement}`;
     
     const handleAspectRatioSelect = (aspectRatioId: AspectRatio['id']) => {
         setSelectedAspectRatio(aspectRatioId);
-        // If we are in edit or recompose mode, changing aspect ratio resets to generate mode.
         if (appMode !== 'generate') {
             setSourceImage1(null);
             setSourceFile1(null);
             setSourceImage2(null);
             setSourceFile2(null);
-            setActiveResult(null); // Also clear the active result to avoid confusion
-            setMessage({ text: '사진 비율을 변경하여 이미지 생성 모드로 전환되었습니다.', type: 'info' });
+            setActiveResult(null);
+            setMessage({ text: '비율을 변경하여 이미지 생성 모드로 전환되었습니다.', type: 'info' });
         }
     };
     
@@ -401,8 +432,8 @@ ${styleEnhancement}`;
 
     if (!isInitialized) {
         return (
-            <div className="flex items-center justify-center h-screen bg-[var(--bg-main)] text-[var(--text-primary)]">
-                <div className="text-center p-8 rounded-2xl bg-[var(--panel-bg-solid)] max-w-md mx-4 shadow-2xl animate-[fadeInScale_0.3s_ease-out]">
+            <div className="flex items-center justify-center h-screen bg-[var(--bg-main)]">
+                <div className="text-center p-8 rounded-2xl bg-[var(--panel-bg-solid)] max-w-md mx-4 shadow-xl animate-[fadeInScale_0.3s_ease-out]">
                     {initializationError ? (
                         <>
                             <h1 className="text-2xl font-bold text-[var(--error-color)] mb-4">초기화 오류</h1>
@@ -410,8 +441,8 @@ ${styleEnhancement}`;
                         </>
                     ) : (
                          <>
-                            <h1 className="text-2xl font-bold neon-text-subtle mb-4">초기화 중...</h1>
-                            <p className="text-[var(--text-secondary)]">AI 미러 유니버스를 준비하고 있습니다.</p>
+                            <h1 className="text-2xl font-bold pastel-gradient-text mb-4">Initialising Universe...</h1>
+                            <p className="text-[var(--text-secondary)]">Demian의 세계를 불러오고 있습니다.</p>
                         </>
                     )}
                 </div>
@@ -420,29 +451,44 @@ ${styleEnhancement}`;
     }
 
     return (
-        <div className="flex flex-col h-screen bg-[var(--bg-main)] text-[var(--text-primary)] overflow-hidden">
-            <div className="container mx-auto p-3 flex-grow flex flex-col min-h-0">
-                <header className="text-center mb-2 flex-shrink-0 animate-[fadeIn_0.5s_ease-out_forwards] opacity-0">
-                    <h1 className="text-4xl md:text-5xl neon-title">AI Mirror Universe</h1>
-                    <p className="text-sm md:text-base mt-1 text-[var(--text-secondary)] font-medium tracking-wide">
-                       “AI를 통해 거울 속에서 새로운 나를 발견하는 무한한 세계”
-                    </p>
+        <div className="flex flex-col h-screen bg-[var(--bg-main)] text-[var(--text-primary)] overflow-hidden font-sans transition-colors duration-300">
+            <div className="container mx-auto p-4 flex-grow flex flex-col min-h-0">
+                <header className="flex flex-col md:flex-row justify-between items-center mb-6 flex-shrink-0 animate-[fadeIn_0.5s_ease-out_forwards]">
+                    <div className="text-center md:text-left mb-4 md:mb-0">
+                        <h1 className="text-3xl md:text-4xl font-bold text-[var(--text-primary)] tracking-tight serif-font">
+                            AI Mirror Universe <span className="font-light text-[var(--accent-primary)]">Persona Nexus</span>
+                        </h1>
+                        <h2 className="text-lg md:text-xl font-medium text-[var(--text-secondary)] mt-1 serif-font opacity-80">
+                            AI 미러 유니버스: 페르소나 넥서스
+                        </h2>
+                        <p className="text-sm mt-1 text-[var(--text-tertiary)] italic">
+                           "거울 속의 무한한 나를 마주하다. Demian의 철학이 담긴 자아 탐구의 여정."
+                        </p>
+                    </div>
+                    <div className="flex gap-3">
+                         <NeumorphicButton onClick={toggleTheme} className="!px-3 !py-2 !rounded-full" title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+                            {darkMode ? '☀️ Day' : '🌙 Night'}
+                        </NeumorphicButton>
+                        <NeumorphicButton onClick={() => setShowTutorial(true)} className="!px-4 !py-2 !text-sm !font-semibold">
+                            📖 사용 가이드
+                        </NeumorphicButton>
+                    </div>
                 </header>
+
+                <ProcessGuide />
                 
-                <main className="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-grow min-h-0">
-                    <aside className="lg:col-span-3 flex flex-col gap-3 animate-[fadeIn_0.5s_ease-out_forwards] opacity-0" style={{ animationDelay: '200ms' }}>
-                        <NeumorphicPanel className="!p-2 neon-glow-panel">
-                            <p className="text-sm text-center text-[var(--text-secondary)] font-medium tracking-wide">
-                                <span className="font-bold neon-text-subtle">Persona Nexus:</span> “다양한 자아(Persona)가 연결되는 네트워크”
-                            </p>
-                        </NeumorphicPanel>
-                        <NeumorphicPanel className="flex-1 flex flex-col">
-                            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-3">{isVideoMode ? '애니메이션 소스' : '메인 소스'}</h2>
+                <main className="grid grid-cols-1 lg:grid-cols-12 gap-5 flex-grow min-h-0">
+                    {/* Left Column: Sources */}
+                    <aside className="lg:col-span-3 flex flex-col gap-4 animate-[fadeIn_0.5s_ease-out_forwards]" style={{ animationDelay: '200ms' }}>
+                        <NeumorphicPanel className="flex-1 flex flex-col min-h-[250px] relative overflow-hidden group">
+                            <div className="absolute top-0 left-0 w-1 h-full bg-[var(--accent-primary)] transition-all group-hover:w-2"></div>
+                            <h2 className="text-lg font-bold text-[var(--text-primary)] mb-2 serif-font pl-2">{isVideoMode ? '🎬 애니메이션 소스' : '👤 메인 소스'}</h2>
                             <ImageUploader onImageUpload={(file) => handleImageUpload(file, 1)} onClear={() => handleImageClear(1)} sourceImage={sourceImage1} />
                         </NeumorphicPanel>
                          { !isVideoMode &&
-                            <NeumorphicPanel className="flex-1 flex flex-col">
-                                <h2 className="text-xl font-bold text-[var(--text-primary)] mb-3">추가 소스 (스타일 & 배경)</h2>
+                            <NeumorphicPanel className="flex-1 flex flex-col min-h-[250px] relative overflow-hidden group">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-[var(--accent-warm)] transition-all group-hover:w-2"></div>
+                                <h2 className="text-lg font-bold text-[var(--text-primary)] mb-2 serif-font pl-2">🎨 스타일 & 배경</h2>
                                 <ImageUploader
                                     onImageUpload={(file) => handleImageUpload(file, 2)}
                                     onClear={() => handleImageClear(2)}
@@ -453,50 +499,46 @@ ${styleEnhancement}`;
                         }
                     </aside>
 
-                    <fieldset disabled={isLoading} className="lg:col-span-5 flex flex-col gap-3 min-h-0 animate-[fadeIn_0.5s_ease-out_forwards] opacity-0 transition-opacity duration-300 disabled:opacity-50 disabled:cursor-wait" style={{ animationDelay: '400ms' }}>
-                        <NeumorphicPanel>
-                            <div className="flex bg-[var(--panel-bg-solid)] p-1 rounded-full border border-[var(--border-color)]">
-                                <button onClick={() => setStudioMode('image')} className={`flex-1 py-2 text-center rounded-full transition-colors ${!isVideoMode ? 'bg-[var(--accent-color)] text-white font-bold' : 'text-[var(--text-secondary)] hover:text-white'}`}>🌌 Image Galaxy</button>
-                                <button onClick={() => setStudioMode('video')} className={`flex-1 py-2 text-center rounded-full transition-colors ${isVideoMode ? 'bg-[var(--accent-color)] text-white font-bold' : 'text-[var(--text-secondary)] hover:text-white'}`}>🪐 Video Universe</button>
-                            </div>
-                            <div className="text-center mt-3 animate-[fadeIn_0.3s]">
-                                {isVideoMode ? (
-                                    <p className="text-md text-[var(--text-secondary)]">“모든 영상이 모여 하나의 우주를 이루는 확장 공간”</p>
-                                ) : (
-                                    <p className="text-md text-[var(--text-secondary)]">“이미지가 은하처럼 무수히 생성되고 흩어지는 창작의 장”</p>
-                                )}
+                    {/* Center Column: Controls */}
+                    <fieldset disabled={isLoading} className="lg:col-span-5 flex flex-col gap-4 min-h-0 animate-[fadeIn_0.5s_ease-out_forwards] transition-opacity duration-300 disabled:opacity-70 disabled:cursor-wait" style={{ animationDelay: '400ms' }}>
+                        <NeumorphicPanel className="!p-3">
+                            <div className="flex bg-[var(--inset-bg)] p-1.5 rounded-full border border-[var(--border-color)]">
+                                <button onClick={() => setStudioMode('image')} className={`flex-1 py-2 text-center rounded-full transition-all duration-300 text-sm font-bold ${!isVideoMode ? 'bg-[var(--panel-bg-solid)] text-[var(--text-primary)] shadow-sm scale-105' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}`}>🌌 Image Galaxy</button>
+                                <button onClick={() => setStudioMode('video')} className={`flex-1 py-2 text-center rounded-full transition-all duration-300 text-sm font-bold ${isVideoMode ? 'bg-[var(--panel-bg-solid)] text-[var(--text-primary)] shadow-sm scale-105' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}`}>🪐 Video Universe</button>
                             </div>
                         </NeumorphicPanel>
                         
-                        <NeumorphicPanel>
-                             <div className="flex justify-between items-center mb-3">
-                                <h2 className="text-xl font-bold text-[var(--text-primary)]">프롬프트 입력</h2>
-                                <NeumorphicButton onClick={handleGetInspiration} title="새로운 영감 받기" className="!p-2 !rounded-full text-xl !bg-transparent" disabled={isVideoMode}>💡</NeumorphicButton>
+                        <NeumorphicPanel className="flex-grow flex flex-col">
+                             <div className="flex justify-between items-center mb-2">
+                                <h2 className="text-lg font-bold text-[var(--text-primary)] serif-font">📝 프롬프트 (Prompt)</h2>
+                                <button onClick={handleGetInspiration} disabled={isVideoMode} className="text-xs font-semibold text-[var(--accent-primary)] hover:text-[var(--accent-hover)] transition-colors flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-[var(--inset-bg)]">
+                                    <span>✨ 영감 받기</span>
+                                </button>
                             </div>
-                            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full h-16 p-3 text-base rounded-xl custom-inset focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]" placeholder={promptPlaceholder}/>
+                            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full h-24 p-4 text-base rounded-xl custom-inset focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] transition-shadow resize-none placeholder:text-[var(--text-tertiary)]" placeholder={promptPlaceholder}/>
                         </NeumorphicPanel>
                         
                         {appMode === 'recompose' && !isVideoMode && (
                             <MixerControls values={mixerValues} onChange={setMixerValues} />
                         )}
                         
-                        <NeumorphicPanel className={`flex-grow flex gap-3 min-h-0 transition-opacity duration-300 ${isVideoMode ? 'opacity-40 pointer-events-none' : ''}`}>
+                        <NeumorphicPanel className={`flex-grow flex gap-4 min-h-0 transition-opacity duration-300 ${isVideoMode ? 'opacity-40 pointer-events-none' : ''}`}>
                             <div className="flex-1 flex flex-col">
-                                <h2 className="text-xl font-bold text-[var(--text-primary)] mb-3">스타일 선택</h2>
+                                <h2 className="text-lg font-bold text-[var(--text-primary)] mb-2 serif-font">🎨 아트 스타일</h2>
                                 <StyleSelector styles={STYLES} selectedStyle={selectedStyle} onSelectStyle={handleStyleSelect} />
                             </div>
                             
-                            <div className='flex-1 flex flex-col'>
-                                <h2 className="text-xl font-bold text-[var(--text-primary)] text-center mb-2">✨ AI Magic Tools</h2>
-                                <p className="text-xs text-center text-[var(--text-secondary)] mb-4">결과물에 적용하여 연속적으로 수정할 수 있습니다.</p>
+                            <div className='flex-1 flex flex-col pl-4 border-l border-[var(--border-color)]'>
+                                <h2 className="text-lg font-bold text-[var(--text-primary)] mb-2 serif-font">🪄 Magic Tools</h2>
                                 <PostProcessingControls onModify={handleCreate} disabled={isMagicToolsDisabled} />
                             </div>
                         </NeumorphicPanel>
                     </fieldset>
 
-                    <aside className="lg:col-span-4 flex flex-col animate-[fadeIn_0.5s_ease-out_forwards] opacity-0" style={{ animationDelay: '600ms' }}>
-                         <NeumorphicPanel className="flex flex-col flex-1 min-h-0">
-                            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-3">결과물</h2>
+                    {/* Right Column: Results & Library */}
+                    <aside className="lg:col-span-4 flex flex-col gap-4 animate-[fadeIn_0.5s_ease-out_forwards]" style={{ animationDelay: '600ms' }}>
+                         <NeumorphicPanel className="flex flex-col flex-1 min-h-[400px] relative">
+                            <h2 className="text-lg font-bold text-[var(--text-primary)] mb-3 serif-font">💎 결과물 (Artifact)</h2>
                             <ResultViewer 
                                 media={activeResult} 
                                 isLoading={isLoading} 
@@ -507,54 +549,53 @@ ${styleEnhancement}`;
                                 appMode={appMode}
                             />
 
-                            <div className={`mt-3 transition-opacity duration-300 ${isVideoMode ? 'opacity-40 pointer-events-none' : ''}`}>
-                                <NeumorphicPanel>
-                                    <h2 className="text-xl font-bold text-[var(--text-primary)] mb-3">사진 비율 선택</h2>
-                                    <AspectRatioSelector aspectRatios={ASPECT_RATIOS} selectedAspectRatio={selectedAspectRatio} onSelectAspectRatio={handleAspectRatioSelect} disabled={false}/>
-                                </NeumorphicPanel>
+                            <div className={`mt-4 transition-opacity duration-300 ${isVideoMode ? 'opacity-40 pointer-events-none' : ''}`}>
+                                <h3 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2">Aspect Ratio</h3>
+                                <AspectRatioSelector aspectRatios={ASPECT_RATIOS} selectedAspectRatio={selectedAspectRatio} onSelectAspectRatio={handleAspectRatioSelect} disabled={false}/>
                             </div>
 
-                            <div className="pt-3 mt-auto">
-                                <button onClick={() => handleCreate()} disabled={isCreationDisabled} className="main-generate-button w-full rounded-full py-3 px-10 text-xl font-bold text-white bg-[var(--accent-color)] transition-all duration-300 ease-in-out shadow-lg hover:-translate-y-1 disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-[var(--text-tertiary)] disabled:shadow-none">
-                                    {isLoading ? (isVideoMode ? '애니메이션 제작 중...' : '생성 중...') : (isVideoMode ? '페르소나 생성하기' : (appMode === 'recompose' ? '결합하기' : '발견하기'))}
+                            <div className="pt-4 mt-auto">
+                                <button onClick={() => handleCreate()} disabled={isCreationDisabled} className="w-full rounded-xl py-4 text-lg font-bold text-white bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-warm)] hover:opacity-90 transition-all duration-300 ease-out shadow-lg hover:-translate-y-1 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0">
+                                    {isLoading ? (isVideoMode ? '애니메이션 제작 중...' : '자아 생성 중...') : (isVideoMode ? '🎬 페르소나 애니메이션 생성' : (appMode === 'recompose' ? '🧬 페르소나 결합하기' : '✨ 새로운 나 발견하기'))}
                                 </button>
                             </div>
+                        </NeumorphicPanel>
 
-                            {generatedMedia.length > 0 && (
-                                <div className="flex flex-col flex-grow min-h-0 mt-4 border-t border-[var(--border-color)] pt-3 animate-[fadeIn_1s_ease-out]">
-                                    <div className="flex flex-wrap justify-between items-center mb-3 gap-2 flex-shrink-0">
-                                        <h2 className="text-lg font-bold text-[var(--text-primary)]">라이브러리</h2>
-                                        <div className="flex items-center space-x-2">
-                                            {isSelectionMode ? (
-                                                <>
-                                                    <span className="text-sm font-semibold text-[var(--text-secondary)] mr-2">{selectedMediaIds.size}개 선택됨</span>
-                                                    <NeumorphicButton onClick={downloadSelectedMedia} className="!px-3 !py-2 text-sm" disabled={selectedMediaIds.size === 0}>선택 다운로드</NeumorphicButton>
-                                                    <NeumorphicButton onClick={toggleSelectionMode} className="!px-3 !py-2 text-sm">취소</NeumorphicButton>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <NeumorphicButton onClick={downloadAllMedia} className="!px-3 !py-2 text-sm">전체 다운로드</NeumorphicButton>
-                                                    <NeumorphicButton onClick={toggleSelectionMode} className="!px-3 !py-2 text-sm">선택</NeumorphicButton>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="overflow-y-auto flex-grow pr-1 custom-scrollbar">
-                                        <ImageGallery images={generatedMedia} onImageClick={isSelectionMode ? toggleMediaSelection : openModal} isSelectionMode={isSelectionMode} selectedImageIds={selectedMediaIds}/>
+                        {generatedMedia.length > 0 && (
+                            <NeumorphicPanel className="flex-grow min-h-[200px] flex flex-col">
+                                <div className="flex justify-between items-center mb-2">
+                                    <h2 className="text-lg font-bold text-[var(--text-primary)] serif-font">🏛️ 갤러리</h2>
+                                    <div className="flex gap-2">
+                                        <button onClick={toggleSelectionMode} className="text-xs font-medium px-2 py-1 rounded hover:bg-[var(--inset-bg)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+                                            {isSelectionMode ? '취소' : '선택'}
+                                        </button>
+                                        <button onClick={isSelectionMode ? downloadSelectedMedia : downloadAllMedia} className="text-xs font-bold px-2 py-1 rounded bg-[var(--inset-bg)] text-[var(--accent-primary)] hover:text-[var(--accent-hover)] transition-colors">
+                                            {isSelectionMode ? '선택 다운로드' : '전체 다운로드'}
+                                        </button>
                                     </div>
                                 </div>
-                            )}
-                        </NeumorphicPanel>
+                                <div className="flex-grow overflow-y-auto custom-scrollbar">
+                                    <ImageGallery images={generatedMedia} onImageClick={isSelectionMode ? toggleMediaSelection : openModal} isSelectionMode={isSelectionMode} selectedImageIds={selectedMediaIds}/>
+                                </div>
+                            </NeumorphicPanel>
+                        )}
                     </aside>
                 </main>
             </div>
 
+            {/* Modals */}
             {isModalOpen && modalImageIndex !== null && (
                  <GalleryModal images={generatedMedia} startIndex={modalImageIndex} onClose={closeModal}/>
             )}
             
-            <footer className="text-center py-2 text-[var(--text-tertiary)] text-xs border-t border-[var(--border-color)] flex-shrink-0">
-                <p className="font-semibold neon-text-subtle">© Created by Demian 임정훈</p>
+            {showTutorial && (
+                <TutorialModal onClose={closeTutorial} />
+            )}
+            
+            <footer className="text-center py-6 text-[var(--text-tertiary)] text-xs border-t border-[var(--border-color)] bg-[var(--bg-secondary)] flex-shrink-0 transition-colors">
+                <p className="font-serif text-sm text-[var(--text-secondary)] font-medium">Developed by Demian 임정훈</p>
+                <p className="text-[var(--accent-primary)] font-bold mt-1 tracking-wide">HRD & AI Coach</p>
+                <p className="mt-2 opacity-60">AI Mirror Universe © 2025. Powered by Google Gemini.</p>
             </footer>
         </div>
     );
